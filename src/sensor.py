@@ -94,15 +94,6 @@ class FilteringSensor(BaseSensor):
 
             time.sleep(self.delay)
 
-class PositionedSensor:
-    def __init__(self, sensor: BaseSensor, dx: float, dy: float, dz: float, facing: tuple[float, float] = (0, 0)):
-        self.sensor = sensor
-        self.dx = dx
-        self.dy = dy
-        self.dz = dz
-        self.type = type
-        self.facing = facing
-
 # CUSTOM CLASSES HERE
 class UWBSensor(FilteringSensor):
     def __init__(self, name: str, path: str, filter: BaseFilter, delay: float, callback=None, call_every: int = None):
