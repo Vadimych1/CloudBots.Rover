@@ -1,0 +1,6 @@
+[2024-11-10 20:20:14,121] sensor:INFO > Initialized new sensor (uwb[/dev/usb0])
+[2024-11-10 20:20:14,121] sensor:INFO > Initialized new sensor (left_camera[/dev/usb1])
+[2024-11-10 20:20:14,121] sensor:INFO > Initialized new sensor (right_camera[/dev/usb2])
+[2024-11-10 20:20:14,121] sensor:INFO > Sensor is listening (uwb[/dev/usb0])
+[2024-11-10 20:20:14,121] sensor:INFO > Sensor is listening (left_camera[/dev/usb1])
+[2024-11-10 20:20:14,121] sensor:INFO > Sensor is listening (right_camera[/dev/usb2])
