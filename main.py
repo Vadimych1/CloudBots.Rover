@@ -1,9 +1,10 @@
 from src.filters import KalmanFilter
 from src.movementlogic import BaseMovementLogic, RollingMovementLogic
 from src.tasks import TaskManager
+from src.rosock import RoSock
+
 import threading, time
 import logging
-
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(name)s:%(levelname)s > %(message)s')
 lg = logging.getLogger('main')
@@ -19,6 +20,8 @@ class Robot:
     INTEGRAL_POS_PRIORITY = 3/10
     TICKER_UPDATE_TIME = 0.1
     TPS = int(1 / TICKER_UPDATE_TIME)
+    CONNECT_TO_SOCKET = False
+    SOCKET_URL = "ws://127.0.0.1:8080"
 
     def __init__(self, movement_logic: BaseMovementLogic):
         self._ticker_signal = threading.Event()
@@ -27,7 +30,7 @@ class Robot:
         self.pos_filter = KalmanFilter(3)
         self.taskmgr = TaskManager()
 
-        # positions
+        "positions"
         self.pos_x = 0
         self.pos_y = 0
         self.pos_z = 0
@@ -44,7 +47,7 @@ class Robot:
         self.spd_y = 0
         self.spd_z = 0
 
-        # angles
+        "angles"
         self.ang_x = 0
         self.ang_y = 0
         self.ang_z = 0
@@ -59,6 +62,17 @@ class Robot:
 
         self.prev_pos_tick = time.time()
 
+        "tasks"
+        self.stop_task_id = None
+
+        "sockets"
+        if self.CONNECT_TO_SOCKET:
+            self.rosock = RoSock(self.SOCKET_URL)
+            self.rosock.connect()
+        else:
+            self.rosock = None
+
+    "ticker block"
     def start_ticker(self):
         """
         Starts the main ticker thread.
@@ -87,14 +101,8 @@ class Robot:
             self.calc_real_pos()
 
             self.taskmgr.tick()
+
         lg.info("Stopped robot ticker thread")
-
-
-    def set_motors_speed(self, speeds: list[float]):
-        """
-        Set motors speed
-        """
-        ...
 
     def pos_tick(self, delta_time: float):
         """
@@ -117,6 +125,12 @@ class Robot:
         self.pos_x, self.pos_y, self.pos_z = self.pos_filter.filter([self.pos_x, self.pos_y, self.pos_z])
 
     "base movement functions"
+    def set_motors_speed(self, speeds: list[float]):
+        """
+        Set motors speed
+        """
+        # TODO
+
     def _forward(self, speed: float):
         self.set_motors_speed(self.movement_logic.forward(speed))
 
@@ -146,8 +160,9 @@ class Robot:
         if speed < 0: return
         seconds = abs(distance) / speed
         
+        self.cancel_stop()
         self._forward(speed) if distance > 0 else self._backward(speed)
-        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+        self.stop_task_id = self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
     
     def move_side_by(self, distance: float, speed: float = 0.5):
         """
@@ -156,8 +171,9 @@ class Robot:
         if speed < 0: return
         seconds = abs(distance) / speed
         
+        self.cancel_stop()
         self._right(speed) if distance > 0 else self._left(speed)
-        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+        self.stop_task_id = self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
 
     def rotate_by(self, angle: float, speed: float = 0.5):
         """
@@ -166,8 +182,28 @@ class Robot:
         if speed < 0: return
         seconds = abs(angle) / speed
 
+        self.cancel_stop()
         self._rotate_right(speed) if angle > 0 else self._rotate_left(speed)
-        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+        self.stop_task_id = self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+
+    "tasks"
+    def clear_tasks(self):
+        """
+        Clear tasks
+        """
+        self.taskmgr.clear()
+
+    def clear_task(self, id):
+        """
+        Clear task by its id
+        """
+        self.taskmgr.clear_task(id)
+
+    def cancel_stop(self):
+        """
+        Cancel stop task
+        """
+        self.taskmgr.clear_task(self.stop_task_id)
 
 
 movementlogic = RollingMovementLogic()
@@ -181,7 +217,7 @@ while True:
     inp = input("").lower()
     lg.info(f"Executing: {inp}")
     match inp:
-        case "exit":
+        case "exit", "quit", "q":
             bot.stop_ticker()
             break
         case _:
