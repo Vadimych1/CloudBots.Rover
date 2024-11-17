@@ -14,6 +14,12 @@ _file.setFormatter(logging.Formatter('[%(asctime)s] %(name)s:%(levelname)s > %(m
 _file.setStream(open('logs/sensor.log', 'w'))
 lg.addHandler(_file)
 
+import configparser
+CFG = configparser.ConfigParser()
+CFG.read('config.ini')
+
+DEFAULT_BAUDRATE = int(CFG.get('sensor', 'DEFAULT_BAUDRATE'))
+
 class BaseSensor:
     """
     Base sensor. Gets value.
@@ -96,7 +102,7 @@ class FilteringSensor(BaseSensor):
             time.sleep(self.delay)
 
 class SerialSensor(BaseSensor):
-    def __init__(self, name: str, path: str, delay: float, callback=None, call_every: int = None, baudrate: int = 9600):
+    def __init__(self, name: str, path: str, delay: float, callback=None, call_every: int = None, baudrate: int = DEFAULT_BAUDRATE):
         self.ser = serial.Serial(path, baudrate)
         self.baudrate = baudrate
         super().__init__(name, path, delay, callback, call_every)
@@ -119,7 +125,7 @@ class SerialSensor(BaseSensor):
         raise NotImplementedError
 
 class FilteringSerialSensor(SerialSensor):
-    def __init__(self, name: str, path: str, delay: float, filter: BaseFilter, callback=None, call_every: int = None, baudrate: int = 9600):
+    def __init__(self, name: str, path: str, delay: float, filter: BaseFilter, callback=None, call_every: int = None, baudrate: int = DEFAULT_BAUDRATE):
         self.filter = filter
         super().__init__(name, path, delay, callback, call_every, baudrate)
 

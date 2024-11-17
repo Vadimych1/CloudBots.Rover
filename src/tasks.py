@@ -1,13 +1,17 @@
 import logging, time
 
-LOG_TASKS_STATE = True
-
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(name)s:%(levelname)s > %(message)s')
 lg = logging.getLogger('tasks')
 _file = logging.StreamHandler()
 _file.setFormatter(logging.Formatter('[%(asctime)s] %(name)s:%(levelname)s > %(message)s'))
 _file.setStream(open('logs/tasks.log', 'w'))
 lg.addHandler(_file)
+
+import configparser
+CFG = configparser.ConfigParser()
+CFG.read('config.ini')
+
+LOG_TASKS_STATE = eval(CFG.get('tasks', 'LOG_TASKS_STATE'))
 
 class TaskManager:
     def __init__(self) -> None:

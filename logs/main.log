@@ -1,8 +1,6 @@
-[2024-11-17 16:53:26,364] main:INFO > Starting robot ticker thread
-[2024-11-17 16:53:26,367] main:INFO > Started robot ticker thread
-[2024-11-17 16:53:26,368] main:INFO > Command listener started. Type command and press Enter to execute it
-[2024-11-17 16:53:32,495] main:INFO > Executing: хуй жопа
-[2024-11-17 16:53:32,497] main:INFO > Command listener started. Type command and press Enter to execute it
-[2024-11-17 16:53:36,128] main:INFO > Executing: exit
-[2024-11-17 16:53:36,129] main:INFO > Stopping robot ticker thread
-[2024-11-17 16:53:36,205] main:INFO > Stopped robot ticker thread
+[2024-11-17 18:49:51,298] main:INFO > Starting robot ticker thread
+[2024-11-17 18:49:51,300] main:INFO > Started robot ticker thread
+[2024-11-17 18:49:51,300] main:INFO > Command listener started. Type command and press Enter to execute it
+[2024-11-17 18:49:53,403] main:INFO > Executing: q
+[2024-11-17 18:49:53,403] main:INFO > Stopping robot ticker thread
+[2024-11-17 18:49:53,407] main:INFO > Stopped robot ticker thread

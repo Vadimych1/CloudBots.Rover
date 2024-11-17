@@ -8,6 +8,12 @@ _file.setFormatter(logging.Formatter('[%(asctime)s] %(name)s:%(levelname)s > %(m
 _file.setStream(open('logs/rosock.log', 'w'))
 lg.addHandler(_file)
 
+import configparser
+CFG = configparser.ConfigParser()
+CFG.read('config.ini')
+
+CHECK_SSL: bool = eval(CFG.get('rosock', 'CHECK_SSL'))
+
 class RoSock:
     """
     WebSocket client for robots.
@@ -35,9 +41,12 @@ class RoSock:
         return self
         
     def _conn(self, *args):
-        self.ws.run_forever(sslopt={
-            "cert_reqs": ssl.CERT_NONE
-        })
+        if not CHECK_SSL:
+            self.ws.run_forever(sslopt={
+                "cert_reqs": ssl.CERT_NONE
+            })
+        else:
+            self.ws.run_forever()
     
     def add_callback(self, method, callback):
         if method in self.callbacks:

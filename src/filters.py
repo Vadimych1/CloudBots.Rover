@@ -1,8 +1,16 @@
+import configparser
+CFG = configparser.ConfigParser()
+CFG.read('config.ini')
+
+DEFAULT_FILTER_SIZE = int(CFG.get('filters', 'DEFAULT_FILTER_SIZE'))
+PROCESS_NOISE_COVARIANCE = float(CFG.get('filters', 'KALMAN_PROCESS_NOISE_COVARIANCE'))
+MEASUREMENT_NOISE_COVARIANCE = float(CFG.get('filters', 'KALMAN_MEASUREMENT_NOISE_COVARIANCE'))
+
 class BaseFilter:
     """
     Base filter class.
     """
-    def __init__(self, size: int):
+    def __init__(self, size: int = DEFAULT_FILTER_SIZE):
         self.size = size
 
     def filter(self, data: list[float]) -> list[float]:
@@ -16,7 +24,7 @@ class MedianFilter(BaseFilter):
     Filters values by taking the median of the 3 last values.
     @param size: Size of data array.
     """
-    def __init__(self, size: int):
+    def __init__(self, size: int = DEFAULT_FILTER_SIZE):
         self.size = size
         self.prev_data = None
         self.current_data = None
@@ -57,14 +65,16 @@ class KalmanFilter(BaseFilter):
     Filters values by using Kalman filter.<br>
     @param size: Size of data array.
     """
-    def __init__(self, size: int):
+    def __init__(self, size: int = DEFAULT_FILTER_SIZE):
+        global PROCESS_NOISE_COVARIANCE, MEASUREMENT_NOISE_COVARIANCE
+        
         self.size = size
         self.data = [
             {
                 "x": 0, # Initial estimate
                 "P": 1, # Initial estimate error covariance
-                "Q": 0.1, # Process noise covariance
-                "R": 0.1, # Measurement noise covariance
+                "Q": PROCESS_NOISE_COVARIANCE, # Process noise covariance
+                "R": MEASUREMENT_NOISE_COVARIANCE, # Measurement noise covariance
                 "A": 1, # State transition coefficient
                 "B": 0, # Control input coefficient
                 "H": 1, # Measurement function coefficient

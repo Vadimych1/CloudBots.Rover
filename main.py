@@ -13,15 +13,18 @@ _file.setFormatter(logging.Formatter('[%(asctime)s] %(name)s:%(levelname)s > %(m
 _file.setStream(open('logs/main.log', 'w'))
 lg.addHandler(_file)
 
+import configparser
+CFG = configparser.ConfigParser()
+CFG.read('config.ini')
 
 "base class for robot"
 class Robot:
-    UWB_POS_PRIORITY = 7/10
-    INTEGRAL_POS_PRIORITY = 3/10
-    TICKER_UPDATE_TIME = 0.1
-    TPS = int(1 / TICKER_UPDATE_TIME)
-    CONNECT_TO_SOCKET = False
-    SOCKET_URL = "ws://127.0.0.1:8080"
+    UWB_POS_PRIORITY: float = eval(CFG.get('main', 'UWB_POS_PRIORITY'))
+    INTEGRAL_POS_PRIORITY: float = eval(CFG.get('main', 'INTEGRAL_POS_PRIORITY'))
+    TICKER_UPDATE_TIME: float = float(CFG.get('main', 'TICKER_UPDATE_TIME'))
+    TPS: int = int(1 / TICKER_UPDATE_TIME)
+    CONNECT_TO_SOCKET: bool = eval(CFG.get('main', 'CONNECT_TO_SOCKET'))
+    SOCKET_URL: str = CFG.get('main', 'SOCKET_URL')
 
     def __init__(self, movement_logic: BaseMovementLogic):
         self._ticker_signal = threading.Event()
@@ -217,7 +220,7 @@ while True:
     inp = input("").lower()
     lg.info(f"Executing: {inp}")
     match inp:
-        case "exit", "quit", "q":
+        case "exit" | "quit" | "q":
             bot.stop_ticker()
             break
         case _:
