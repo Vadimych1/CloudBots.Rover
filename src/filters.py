@@ -5,7 +5,7 @@ class BaseFilter:
     def __init__(self, size: int):
         self.size = size
 
-    def filter(self, data):
+    def filter(self, data: list[float]) -> list[float]:
         return data
     
     def reset(self):
@@ -21,7 +21,7 @@ class MedianFilter(BaseFilter):
         self.prev_data = None
         self.current_data = None
  
-    def filter(self, data):   
+    def filter(self, data: list[float]) -> list[float]:   
         """
         Filters value provided by data.
         """
@@ -80,7 +80,7 @@ class KalmanFilter(BaseFilter):
         self.data[index]["P"] = (1 - self.data[index]["K"] * self.data[index]["H"]) * self.data[index]["P"]
         return self.data[index]["x"]
        
-    def filter(self, data: list[float]):  
+    def filter(self, data: list[float]) -> list[float]:  
         """
         Filters value provided by data.
         """

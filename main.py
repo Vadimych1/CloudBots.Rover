@@ -1,40 +1,189 @@
-import numpy as np
-import tensorflow as tf
+from src.filters import KalmanFilter
+from src.movementlogic import BaseMovementLogic, RollingMovementLogic
+from src.tasks import TaskManager
+import threading, time
+import logging
 
-x_data = [
-    [0, 0],
-    [0, 1],
-    [1, 0],
-    [1, 1]
-]
-y_data = [
-    [0],
-    [1],
-    [1],
-    [0]
-]
 
-X = tf.placeholder(tf.float32, [None, 2])
-Y = tf.placeholder(tf.float32, [None, 1])
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(name)s:%(levelname)s > %(message)s')
+lg = logging.getLogger('main')
+_file = logging.StreamHandler()
+_file.setFormatter(logging.Formatter('[%(asctime)s] %(name)s:%(levelname)s > %(message)s'))
+_file.setStream(open('logs/main.log', 'w'))
+lg.addHandler(_file)
 
-W = tf.Variable(tf.random_normal([2, 1]), name='weight')
-b = tf.Variable(tf.random_normal([1]), name='bias')
 
-hypothesis = tf.sigmoid(tf.matmul(X, W) + b)
+"base class for robot"
+class Robot:
+    UWB_POS_PRIORITY = 7/10
+    INTEGRAL_POS_PRIORITY = 3/10
+    TICKER_UPDATE_TIME = 0.1
+    TPS = int(1 / TICKER_UPDATE_TIME)
 
-cost = -tf.reduce_mean(Y * tf.log(hypothesis) + (1 - Y) * tf.log(1 - hypothesis))
-train = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(cost)
+    def __init__(self, movement_logic: BaseMovementLogic):
+        self._ticker_signal = threading.Event()
 
-predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
-accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, Y), dtype=tf.float32))
+        self.movement_logic = movement_logic
+        self.pos_filter = KalmanFilter(3)
+        self.taskmgr = TaskManager()
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
+        # positions
+        self.pos_x = 0
+        self.pos_y = 0
+        self.pos_z = 0
 
-    for step in range(10001):
-        sess.run(train, feed_dict={X: x_data, Y: y_data})
-        if step % 100 == 0:
-            print(step, sess.run(cost, feed_dict={X: x_data, Y: y_data}), sess.run(W), sess.run(b))
+        self.uwb_pos_x = 0
+        self.uwb_pos_y = 0
+        self.uwb_pos_z = 0
 
-    h, c, a = sess.run([hypothesis, predicted, accuracy], feed_dict={X: x_data, Y: y_data})
-    print(h, c, a)
+        self.tick_pos_x = 0
+        self.tick_pos_y = 0
+        self.tick_pos_z = 0
+
+        self.spd_x = 0
+        self.spd_y = 0
+        self.spd_z = 0
+
+        # angles
+        self.ang_x = 0
+        self.ang_y = 0
+        self.ang_z = 0
+
+        self.tick_ang_x = 0
+        self.tick_ang_y = 0
+        self.tick_ang_z = 0
+
+        self.ang_spd_x = 0
+        self.ang_spd_y = 0
+        self.ang_spd_z = 0
+
+        self.prev_pos_tick = time.time()
+
+    def start_ticker(self):
+        """
+        Starts the main ticker thread.
+        """
+        lg.info("Starting robot ticker thread")
+        t = threading.Thread(target=self._ticker)
+        t.start()
+
+    def stop_ticker(self):
+        """
+        Stops the main ticker thread.
+        """
+        lg.info("Stopping robot ticker thread")
+        self._ticker_signal.set()
+
+    def _ticker(self):
+        lg.info("Started robot ticker thread")
+        self.prev_pos_tick = time.time()
+        while not self._ticker_signal.is_set():
+            time.sleep(self.TICKER_UPDATE_TIME)
+            
+            tick_time = time.time()
+            self.pos_tick(self.prev_pos_tick - tick_time)
+            self.prev_pos_tick = tick_time
+
+            self.calc_real_pos()
+
+            self.taskmgr.tick()
+        lg.info("Stopped robot ticker thread")
+
+
+    def set_motors_speed(self, speeds: list[float]):
+        """
+        Set motors speed
+        """
+        ...
+
+    def pos_tick(self, delta_time: float):
+        """
+        Integrates the state of the robot (rotation & position)
+        """
+        self.tick_pos_x += self.spd_x * delta_time
+        self.tick_pos_y += self.spd_y * delta_time
+        self.tick_pos_z += self.spd_z * delta_time
+        self.tick_ang_x += self.ang_spd_x * delta_time
+        self.tick_ang_y += self.ang_spd_y * delta_time
+        self.tick_ang_z += self.ang_spd_z * delta_time
+
+    def calc_real_pos(self):
+        """
+        Calculates the "real" pos of robot by combining the UWB position and the integral position and then filtering it
+        """
+        self.pos_x = self.uwb_pos_x * self.UWB_POS_PRIORITY + self.tick_pos_x * self.INTEGRAL_POS_PRIORITY
+        self.pos_y = self.uwb_pos_y * self.UWB_POS_PRIORITY + self.tick_pos_y * self.INTEGRAL_POS_PRIORITY
+        self.pos_z = self.uwb_pos_z * self.UWB_POS_PRIORITY + self.tick_pos_z * self.INTEGRAL_POS_PRIORITY
+        self.pos_x, self.pos_y, self.pos_z = self.pos_filter.filter([self.pos_x, self.pos_y, self.pos_z])
+
+    "base movement functions"
+    def _forward(self, speed: float):
+        self.set_motors_speed(self.movement_logic.forward(speed))
+
+    def _backward(self, speed: float):
+        self.set_motors_speed(self.movement_logic.backward(speed))
+
+    def _left(self, speed: float):
+        self.set_motors_speed(self.movement_logic.left(speed))
+
+    def _right(self, speed: float):
+        self.set_motors_speed(self.movement_logic.right(speed))
+
+    def _rotate_left(self, speed: float):
+        self.set_motors_speed(self.movement_logic.rotate_left(speed))
+
+    def _rotate_right(self, speed: float):
+        self.set_motors_speed(self.movement_logic.rotate_right(speed))
+
+    def _stop(self, speed: float):
+        self.set_motors_speed(self.movement_logic.stop(speed))
+
+    "movement functions"
+    def move_by(self, distance: float, speed: float = 0.5):
+        """
+        Move forward/backward by `distance` with `speed`
+        """
+        if speed < 0: return
+        seconds = abs(distance) / speed
+        
+        self._forward(speed) if distance > 0 else self._backward(speed)
+        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+    
+    def move_side_by(self, distance: float, speed: float = 0.5):
+        """
+        Move left/right by `distance` with `speed`
+        """
+        if speed < 0: return
+        seconds = abs(distance) / speed
+        
+        self._right(speed) if distance > 0 else self._left(speed)
+        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+
+    def rotate_by(self, angle: float, speed: float = 0.5):
+        """
+        Rotate left/right by `angle` with `speed`
+        """
+        if speed < 0: return
+        seconds = abs(angle) / speed
+
+        self._rotate_right(speed) if angle > 0 else self._rotate_left(speed)
+        self.taskmgr.add_task(lambda: self._stop(0), int(seconds * self.TPS))
+
+
+movementlogic = RollingMovementLogic()
+bot = Robot(movementlogic)
+
+bot.start_ticker()
+bot.move_by(10, 0.5)
+
+lg.info("Command listener started. Type command and press Enter to execute it")
+while True:
+    inp = input("").lower()
+    lg.info(f"Executing: {inp}")
+    match inp:
+        case "exit":
+            bot.stop_ticker()
+            break
+        case _:
+            lg.info(f"Unknown command: {inp}")
+            continue
