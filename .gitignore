@@ -1,0 +1,5 @@
+/navigation/datasets/*
+/navigation/datasets/*/
+/navigation/cache/*
+/navigation/parseddata/*
+/navigation/venv

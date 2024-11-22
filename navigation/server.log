@@ -1,0 +1,129 @@
+Running BrowserMob Proxy using LittleProxy implementation. To revert to the legacy implementation, run the proxy with the command-line option '--use-littleproxy false'.
+[INFO  2024-11-22T18:37:33,667 net.lightbody.bmp.proxy.Main] (main) Starting BrowserMob Proxy version 2.1.4 
+[INFO  2024-11-22T18:37:33,752 org.eclipse.jetty.util.log] (main) jetty-7.x.y-SNAPSHOT 
+[INFO  2024-11-22T18:37:34,329 org.eclipse.jetty.util.log] (main) started o.e.j.s.ServletContextHandler{/,null} 
+[INFO  2024-11-22T18:37:34,810 org.eclipse.jetty.util.log] (main) Started SelectChannelConnector@0.0.0.0:8080 
+[INFO  2024-11-22T18:37:35,969 org.littleshoot.proxy.impl.DefaultHttpProxyServer] (qtp1375394559-18) Starting proxy at address: 0.0.0.0/0.0.0.0:8081 
+[INFO  2024-11-22T18:37:36,046 org.littleshoot.proxy.impl.DefaultHttpProxyServer] (qtp1375394559-18) Proxy listening with TCP transport 
+[INFO  2024-11-22T18:37:37,282 org.littleshoot.proxy.impl.DefaultHttpProxyServer] (qtp1375394559-18) Proxy started at address: /0:0:0:0:0:0:0:0:8081 
+[INFO  2024-11-22T18:38:01,606 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-4) (NEGOTIATING_CONNECT) [id: 0x72fbbfbe, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52852]: An IOException occurred on ClientToProxyConnection: Программа на вашем хост-компьютере разорвала установленное подключение 
+[INFO  2024-11-22T18:38:01,627 org.littleshoot.proxy.impl.ProxyToServerConnection] (LittleProxy-0-ProxyToServerWorker-1) (DISCONNECTED) [id: 0x46a9a789, L:0.0.0.0/0.0.0.0:52960]: Connection to upstream server failed java.nio.channels.ClosedChannelException: null
+	at io.netty.handler.ssl.SslHandler.channelInactive(...)(Unknown Source) ~[browsermob-dist-2.1.4.jar:?]
+
+[INFO  2024-11-22T18:38:02,099 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-4) (AWAITING_INITIAL) [id: 0xadd6283e, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52918]: An IOException occurred on ClientToProxyConnection: Программа на вашем хост-компьютере разорвала установленное подключение 
+[INFO  2024-11-22T18:38:12,485 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-7) (AWAITING_INITIAL) [id: 0x34244fba, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52836]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,487 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-3) (AWAITING_INITIAL) [id: 0xd6ed1d22, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53037]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,503 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-0) (AWAITING_INITIAL) [id: 0x767b9e2a, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53045]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,504 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x9cce450c, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53036]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,510 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-0) (AWAITING_INITIAL) [id: 0x3d2246ea, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53034]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,514 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x2f7281f7, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52946]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,516 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x61ff398c, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52933]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,519 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x4abc9574, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53003]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,521 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-6) (AWAITING_INITIAL) [id: 0xdd9378c0, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53042]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,525 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-0) (AWAITING_INITIAL) [id: 0xf2e1c2ff, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52837]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,527 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x842b0971, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52982]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,529 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x5879f5c9, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52916]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,529 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-7) (AWAITING_INITIAL) [id: 0x85ff7191, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53043]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,532 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-7) (AWAITING_INITIAL) [id: 0xa13e67ab, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52978]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,540 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-1) (AWAITING_INITIAL) [id: 0x0bdaaad3, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52838]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,545 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-4) (AWAITING_INITIAL) [id: 0x44c3bdfb, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53038]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,545 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-0) (AWAITING_INITIAL) [id: 0xdb2e672f, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53071]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,550 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x1397f429, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:52830]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,550 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-4) (AWAITING_INITIAL) [id: 0x5a5dda1d, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53161]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,553 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-7) (AWAITING_INITIAL) [id: 0xb2d22f4e, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53070]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,553 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-2) (AWAITING_INITIAL) [id: 0x888caf5b, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53051]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,555 org.littleshoot.proxy.impl.ClientToProxyConnection] (LittleProxy-0-ClientToProxyWorker-5) (AWAITING_INITIAL) [id: 0xae2c008c, L:/0:0:0:0:0:0:0:1:8081 - R:/0:0:0:0:0:0:0:1:53063]: An IOException occurred on ClientToProxyConnection: Удаленный хост принудительно разорвал существующее подключение 
+[INFO  2024-11-22T18:38:12,985 org.littleshoot.proxy.impl.ProxyToServerConnection] (LittleProxy-0-ProxyToServerWorker-5) (HANDSHAKING) [id: 0x28fdcf75, L:0.0.0.0/0.0.0.0:53173 ! R:optimizationguide-pa.googleapis.com/108.177.14.95:443]: Connection to upstream server failed java.io.IOException: Удаленный хост принудительно разорвал существующее подключение
+	at sun.nio.ch.SocketDispatcher.write0(Native Method) ~[?:1.8.0_51]
+	at sun.nio.ch.SocketDispatcher.write(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.IOUtil.writeFromNativeBuffer(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.IOUtil.write(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.SocketChannelImpl.write(Unknown Source) ~[?:1.8.0_51]
+	at io.netty.channel.socket.nio.NioSocketChannel.doWrite(NioSocketChannel.java:411) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush0(AbstractChannel.java:856) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.flush0(AbstractNioChannel.java:362) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush(AbstractChannel.java:823) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.flush(DefaultChannelPipeline.java:1296) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelDuplexHandler.flush(ChannelDuplexHandler.java:117) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeWriteAndFlush(AbstractChannelHandlerContext.java:813) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.write(AbstractChannelHandlerContext.java:825) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:805) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:842) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.DefaultChannelPipeline.writeAndFlush(DefaultChannelPipeline.java:1032) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel.writeAndFlush(AbstractChannel.java:296) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ProxyConnection.writeToChannel(ProxyConnection.java:266) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ClientToProxyConnection$2.execute(ClientToProxyConnection.java:488) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow.doProcessCurrentStep(ConnectionFlow.java:140) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow.access$000(ConnectionFlow.java:14) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow$1.run(ConnectionFlow.java:124) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.PromiseTask$RunnableAdapter.call(PromiseTask.java:38) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.PromiseTask.run(PromiseTask.java:73) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:163) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:418) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:454) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:873) [browsermob-dist-2.1.4.jar:?]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_51]
+
+[INFO  2024-11-22T18:38:12,985 org.littleshoot.proxy.impl.ProxyToServerConnection] (LittleProxy-0-ProxyToServerWorker-4) (HANDSHAKING) [id: 0x594367db, L:0.0.0.0/0.0.0.0:53172 ! R:optimizationguide-pa.googleapis.com/108.177.14.95:443]: Connection to upstream server failed java.io.IOException: Удаленный хост принудительно разорвал существующее подключение
+	at sun.nio.ch.SocketDispatcher.write0(Native Method) ~[?:1.8.0_51]
+	at sun.nio.ch.SocketDispatcher.write(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.IOUtil.writeFromNativeBuffer(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.IOUtil.write(Unknown Source) ~[?:1.8.0_51]
+	at sun.nio.ch.SocketChannelImpl.write(Unknown Source) ~[?:1.8.0_51]
+	at io.netty.channel.socket.nio.NioSocketChannel.doWrite(NioSocketChannel.java:411) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush0(AbstractChannel.java:856) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.flush0(AbstractNioChannel.java:362) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush(AbstractChannel.java:823) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.flush(DefaultChannelPipeline.java:1296) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:115) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:779) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:760) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.ChannelDuplexHandler.flush(ChannelDuplexHandler.java:117) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:787) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.invokeWriteAndFlush(AbstractChannelHandlerContext.java:813) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.write(AbstractChannelHandlerContext.java:825) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:805) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:842) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.DefaultChannelPipeline.writeAndFlush(DefaultChannelPipeline.java:1032) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.AbstractChannel.writeAndFlush(AbstractChannel.java:296) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ProxyConnection.writeToChannel(ProxyConnection.java:266) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ClientToProxyConnection$2.execute(ClientToProxyConnection.java:488) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow.doProcessCurrentStep(ConnectionFlow.java:140) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow.access$000(ConnectionFlow.java:14) ~[browsermob-dist-2.1.4.jar:?]
+	at org.littleshoot.proxy.impl.ConnectionFlow$1.run(ConnectionFlow.java:124) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.PromiseTask$RunnableAdapter.call(PromiseTask.java:38) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.PromiseTask.run(PromiseTask.java:73) ~[browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:163) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:418) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:454) [browsermob-dist-2.1.4.jar:?]
+	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:873) [browsermob-dist-2.1.4.jar:?]
+	at java.lang.Thread.run(Unknown Source) [?:1.8.0_51]
+
