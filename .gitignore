@@ -3,3 +3,5 @@
 /navigation/cache/*
 /navigation/parseddata/*
 /navigation/venv
+/logs/
+/navigation/*.log
