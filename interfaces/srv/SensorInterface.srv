@@ -1,0 +1,10 @@
+bool sendVideoData
+---
+bool success
+string message
+
+string video_data
+
+float64 global_x
+float64 global_y
+float64 global_z
