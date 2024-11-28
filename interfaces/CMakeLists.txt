@@ -14,7 +14,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/Message.srv"
+  "srv/ReceiveSensorInterface.srv"
+  "srv/SensorInterface.srv"
 )
 
 if(BUILD_TESTING)
