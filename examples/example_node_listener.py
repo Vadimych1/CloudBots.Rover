@@ -13,7 +13,7 @@ class ListenerNode(Node):
         print(data.get("x"), data.get("y"), data.get("z"))
 
 # create node and run it
-node = ListenerNode(4532, "listening_node_2")
+node = ListenerNode(4532, "listening_node")
 thread = node.run()
 
 # subscribe to topic
