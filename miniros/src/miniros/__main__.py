@@ -54,6 +54,34 @@ def search_for_package(package_name: str):
         if x == package_name:
             return True
     return False
+
+def install(package_name):
+    if not os.path.exists("src/%s/dist" % package_name):
+        logging.warning("Package is not built. Build it now?")
+
+        while (create_or_not := input(": Do you want to continue? (y/n) ")) not in ["y", "n"]:
+            continue
+
+        if create_or_not == "n":
+            quit(0)
+
+        build(package_name)
+
+
+    whl = ""
+    directory = os.listdir("./src/%s/dist" % package_name)
+    for x in directory:
+        if x.endswith(".whl"):
+            whl = x
+
+    if whl == "":
+        logging.error("Failed to install package")
+        return False
+
+    os.system("pip install ./src/%s/dist/%s --force-reinstall" % (package_name, whl))
+    os.system("cd ..")
+
+    return True
         
 def build(package_name: str):
     c = os.system("cd src/%s && python -m build && cd .." % package_name)
@@ -100,35 +128,30 @@ if args.package:
                 os.system("pip uninstall %s" % args.package_name)
 
         case "install":
+            if args.package_name == "all":
+                success = 0
+                for x in os.listdir("./src"):
+                    try:
+                        if not install(x):
+                            logging.warning("Failed to install package %s" % x)
+                        else:
+                            success += 1
+                    except:
+                        pass
+
+                logging.info("Successfully installed %d packages" % success)
+                quit(0)
+
             if not search_for_package(args.package_name):
                 parser.error("Package not found")
             else:
                 logging.info("Installing package...")
 
-                if not os.path.exists("src/%s/dist" % args.package_name):
-                    logging.warning("Package is not built. Build it now?")
-
-                    while (create_or_not := input(": Do you want to continue? (y/n) ")) not in ["y", "n"]:
-                        continue
-
-                    if create_or_not == "n":
-                        quit(0)
-
-                    build(args.package_name)
-
-
-                whl = ""
-                directory = os.listdir("./src/%s/dist" % args.package_name)
-                for x in directory:
-                    if x.endswith(".whl"):
-                        whl = x
-
-                if whl == "":
-                    logging.error("Failed to install package")
+                if not install(args.package_name):
+                    logging.warning("Failed to install package %s" % args.package_name)
                     quit(1)
 
-                os.system("pip install ./src/%s/dist/%s --force-reinstall" % (args.package_name, whl))
-                os.system("cd ..")
+                logging.info("Package %s installed successfully" % args.package_name)
 
         case "create":
             if search_for_package(args.package_name) and not args.force:
