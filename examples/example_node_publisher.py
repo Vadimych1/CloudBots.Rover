@@ -23,4 +23,6 @@ while True:
     pack.set("z", 3 * i)
     node.publish(pack, "example_topic")
 
+    print(f"Published packet {i} {i * 2} {i * 3} ({pack})")
+
     i += 1

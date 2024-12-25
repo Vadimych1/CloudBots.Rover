@@ -317,17 +317,22 @@ class Server:
         except:
             pass
 
+        to_delete = []
         for topic in self.topics:
             try:
                 if self.topics[topic].owner == auth_data["name"]:
                     self.topics[topic].disconnect(self)
-                    del self.topics[topic]
+                    to_delete.append(topic)
             except:
                 pass
+
         try:
             self.connections.pop(auth_data["name"])
         except:
             pass
+
+        for topic in to_delete:
+            self.topics.pop(topic)
 
     def _message(self, conn: socket.socket, data: dict):
         ddata = json.loads(data["data"])
