@@ -311,16 +311,23 @@ class Server:
         except Exception as e:
             self.logger.debug(e)
 
+        try:
             for topic in self.topics:
                 self.topics[topic].unsubscribe(auth_data["name"])
-            
-            for topic in self.topics:
+        except:
+            pass
+
+        for topic in self.topics:
+            try:
                 if self.topics[topic].owner == auth_data["name"]:
                     self.topics[topic].disconnect(self)
                     del self.topics[topic]
-
+            except:
+                pass
+        try:
             self.connections.pop(auth_data["name"])
-
+        except:
+            pass
 
     def _message(self, conn: socket.socket, data: dict):
         ddata = json.loads(data["data"])
