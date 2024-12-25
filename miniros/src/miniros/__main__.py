@@ -10,7 +10,7 @@ colorama.init(autoreset=True)
 logging.basicConfig(level=logging.INFO, format=colorama.Style.BRIGHT + colorama.Fore.BLUE + "%(asctime)s - %(levelname)s - %(message)s")
 
 parser = ArgumentParser()
-parser.add_argument("package", type=str, nargs="?", choices=["build", "install", "uninstall", "create", "delete"], default=None, help="Package mode")
+parser.add_argument("package", type=str, nargs="?", choices=["build", "install", "uninstall", "create", "delete", "run"], default=None, help="Package mode")
 parser.add_argument("package_name", type=str, nargs="?", default=None, help="Package name")
 
 pack_group = parser.add_argument_group("package")
@@ -19,6 +19,7 @@ pack_group.add_argument("--description", type=str, default="MiniROS Package", he
 pack_group.add_argument("--version", type=str, default="1.0.0", help="Package version", metavar="<str>")
 pack_group.add_argument("--email", type=str, default="author@example.com", help="Author email", metavar="<str>")
 pack_group.add_argument("--force", action="store_true", default=False, help="Force package creation")
+pack_group.add_argument("--args", nargs="+", type=str, default="", help="Package arguments", metavar="<str>")
 
 parser.add_argument("--secure", action="store_true", default=False, help="Enable secure mode")
 parser.add_argument("--port", type=int, default=4532, help="Port number to use", metavar="<int>")
@@ -68,6 +69,13 @@ if args.package:
         parser.error("Argument package_name is required")
 
     match args.package:
+        case "run":
+            if not search_for_package(args.package_name):
+                parser.error("Package not found")
+            else:
+                logging.info("Running package...")
+                os.system("python -m %s %s" % (args.package_name, " ".join(args.args)))
+
         case "delete":
             if not search_for_package(args.package_name):
                 parser.error("Package not found")
@@ -100,7 +108,7 @@ if args.package:
                 if not os.path.exists("src/%s/dist" % args.package_name):
                     logging.warning("Package is not built. Build it now?")
 
-                    while (create_or_not := input(": Do you want to continue? (y/n) " % args.package_name)) not in ["y", "n"]:
+                    while (create_or_not := input(": Do you want to continue? (y/n) ")) not in ["y", "n"]:
                         continue
 
                     if create_or_not == "n":
