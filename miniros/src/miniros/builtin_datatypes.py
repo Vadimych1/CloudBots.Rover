@@ -63,19 +63,31 @@ class Image(Packet):
     def __init__(self) -> None:
         self.image = None
         super().__init__({"width": int, "height": int, "image_data": str})
+
+    def _print_debug(self) -> None:
+        print(self.get("width"), "px (w)")
+        print(self.get("height"), "px (h)")
+        print(len(self.get("image_data")), "bytes")
     
     def load_image(self, image: pilimg.Image) -> None:
         self.image = image
         self.set("width", image.width)
         self.set("height", image.height)
 
-        data = b64encode(image.tobytes()).decode()
+        data = self._encode(image)
         self.set("image_data", data)
 
         return self
     
     def get_image(self) -> pilimg.Image:
-        return pilimg.frombytes("RGB", (self.get("width"), self.get("height")), b64decode(self.get("image_data")))
+        return self._decode(self.get("image_data"))
     
     def get_image_array(self) -> np.ndarray:
         return np.array(self.get_image())
+    
+    def _encode(self, data: pilimg.Image) -> str:
+        data = b64encode(data.tobytes()).decode()
+        return data
+    
+    def _decode(self, data: str) -> pilimg.Image:
+        return pilimg.frombytes("RGB", (self.get("width"), self.get("height")), b64decode(data))

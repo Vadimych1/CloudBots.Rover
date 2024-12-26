@@ -176,14 +176,12 @@ class Node:
         data_len = len(data)
         data_len = struct.pack("i", data_len)
         socket.send(data_len)
-        socket.send(data)
-
-        self.logger.debug(f"Sent packet to node: {self.name}")
+        socket.send(encode_data(data))
 
     def _recv(self, socket: socket.socket) -> bytes:
         data_len = socket.recv(4)
         data_len = struct.unpack("i", data_len)[0]
-        return socket.recv(data_len)
+        return decode_data(socket.recv(data_len))
 
     #
     def _handle_send_direct(self, data: dict):
@@ -317,6 +315,8 @@ class Server:
                 try:
                     data = self._recv(conn).decode("utf-8")
                     data = json.loads(data)
+                except ConnectionResetError as e:
+                    break
                 except:
                     continue
 
@@ -396,12 +396,12 @@ class Server:
 
         data_len = struct.pack("i", len(data))
         conn.send(data_len)
-        conn.send(data)
+        conn.send(encode_data(data))
 
     def _recv(self, conn: socket.socket) -> bytes:
         data_len = conn.recv(4)
         data_len = struct.unpack("i", data_len)[0]
-        return conn.recv(data_len)
+        return decode_data(conn.recv(data_len))
 
     def _parse_packet(self, data: dict, p_type: type = Packet) -> Packet:
         try:
@@ -643,3 +643,10 @@ class PublishPacket(Packet):
 class SendDirectPacket(Packet):
     def __init__(self):
         super().__init__({"to": str, "packet": str})
+
+
+def encode_data(data: bytes):
+    return data
+
+def decode_data(data: bytes):
+    return data
