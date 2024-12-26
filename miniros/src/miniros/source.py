@@ -6,7 +6,7 @@ import threading
 import time
 import struct
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class Packet:
     def __init__(self, fields: dict[str, type]) -> None:
@@ -44,8 +44,11 @@ class Packet:
 
     def from_json(self, data: str | dict) -> "Packet":
         if type(data) is str:
-            data = json.loads(data)
-
+            try:
+                data = json.loads(data)
+            except:
+                return None
+            
         for field in self.fields:
             try:
                 if "_parse_" + field in self.__class__.__dict__:
@@ -125,10 +128,12 @@ class Node:
     
     def _listener(self, socket: socket.socket) -> None:
         while True:
-            data = self._recv(socket).decode("utf-8")
-            data = json.loads(data)
+            try:
+                data = self._recv(socket).decode("utf-8")
+                data = json.loads(data)
+            except:
+                continue
 
-            self.logger.debug(data)
             self._process_message(data)
 
     def _search_for_handler(self, name: str):
@@ -144,22 +149,25 @@ class Node:
         return None
     
     def _process_message(self, data: dict) -> None:
-        if "type" in data:
-            h = self._search_for_handler("_handle_" + data["type"])
-            if h:
-                self.logger.debug(f"Got handler {h}")
-                h(self, data)
-            else:
-                self.logger.debug("Got unknown message type")
+        try:
+            if "type" in data:
+                h = self._search_for_handler("_handle_" + data["type"])
+                if h:
+                    self.logger.debug(f"Got handler {h}")
+                    h(self, data)
+                else:
+                    self.logger.debug("Got unknown message type")
 
-        elif "status" in data:
-            if data["status"] == "error":
-                self.logger.error(f"Error: {data['solve']}")
-            else:
-                self.logger.debug(data["status"], data)
+            elif "status" in data:
+                if data["status"] == "error":
+                    self.logger.error(f"Error: {data['solve']}")
+                else:
+                    self.logger.debug(data["status"], data)
 
-        else:
-            self.logger.debug("Got unknown message format")
+            else:
+                self.logger.debug("Got unknown message format")
+        except Exception as e:
+            self.logger.debug(e)
 
     def _send(self, socket: socket.socket, data: bytes | str) -> None:
         if type(data) == str:
@@ -188,16 +196,19 @@ class Node:
         Handle data from publisher node
         """
 
-        packet = PublishPacket().from_json(data)
-        self.logger.debug(f"Got packet: {packet} from {data}")
-        topic = packet.get("topic")
+        try:
+            packet = PublishPacket().from_json(data)
+            self.logger.debug(f"Got packet: {packet}")
+            topic = packet.get("topic")
 
-        handler = self._search_for_handler("handle_" + topic)
-        if handler:
-            self.logger.debug(f"Got handler for topic: {topic} {handler}")
-            handler(self, json.loads(packet.get("packet")))
-        else:
-            self.logger.debug(f"Got packet for unknown topic: {topic}")
+            handler = self._search_for_handler("handle_" + topic)
+            if handler:
+                self.logger.debug(f"Got handler for topic: {topic} {handler}")
+                handler(self, json.loads(packet.get("packet")))
+            else:
+                self.logger.debug(f"Got packet for unknown topic: {topic}")
+        except Exception as e:
+            self.logger.debug(e)
 
     def _handle_topic_closed(self, data: dict):
         topic = data["topic"]
@@ -303,10 +314,13 @@ class Server:
 
         try:
             while True:
-                data = self._recv(conn).decode("utf-8")
-                data = json.loads(data)
+                try:
+                    data = self._recv(conn).decode("utf-8")
+                    data = json.loads(data)
+                except:
+                    continue
+
                 self._message(conn, data)
-                self.logger.debug(data)
 
         except Exception as e:
             self.logger.debug(e)
@@ -335,7 +349,11 @@ class Server:
             self.topics.pop(topic)
 
     def _message(self, conn: socket.socket, data: dict):
-        ddata = json.loads(data["data"])
+        try:
+            ddata = json.loads(data["data"])
+        except:
+            return
+        
         match data["type"]:
             case "create_topic":
                 self._create_topic(conn, ddata)

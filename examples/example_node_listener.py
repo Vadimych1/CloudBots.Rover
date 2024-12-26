@@ -14,7 +14,7 @@ class ListenerNode(Node):
 
 # create node and run it
 node = ListenerNode(4532, "listening_node")
-thread = node.run()
+node.run()
 
 # subscribe to topic
 node.subscribe("example_topic")
