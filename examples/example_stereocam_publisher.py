@@ -89,7 +89,7 @@ class StereoCam:
         frame = frame.reshape((q.height, q.width, 2))
         return frame[:,:,0], frame[:,:,1]
 
-FPS = 5
+FPS = 20
 if __name__ == "__main__":
     cam = StereoCam(0, initVideo = False)
     # cam = StereoCam(0)
@@ -127,8 +127,12 @@ if __name__ == "__main__":
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-        if time.time() - t < 1/FPS:
-            time.sleep(1/FPS - (time.time() - t))
+        q = time.time()
+        print(q - t, "waiting")
+        if (q - t) < 1/FPS:
+            time.sleep(1/FPS - (q - t))
+
+        t = q
 
     node.stop()
     
