@@ -7,8 +7,9 @@ class StereocamListener(Node):
     def __init__(self, port: int, node_name: str = "changeme") -> None:
         super().__init__(port, node_name)
 
-    def handle_stereocam_depth(self, data: dict):
-        pack: Image = Image().from_json(data)
+    def handle_stereocam_depth(self, data: dict, additional_data: bytes):
+        print("Got data")
+        pack: Image = Image().from_json(data, additional_data)
         cv2.imshow("DEPTH", pack.get_image_array())
 
         if cv2.waitKey(1) & 0xFF == ord("q"):

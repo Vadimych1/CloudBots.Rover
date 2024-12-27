@@ -21,6 +21,7 @@ while True:
     pack.set("x", i)
     pack.set("y", 2 * i)
     pack.set("z", 3 * i)
+    pack.set_additional_data("test", b"test")
     node.publish(pack, "example_topic")
 
     print(f"Published packet {i} {i * 2} {i * 3} ({pack})")

@@ -6,11 +6,15 @@ import threading
 import time
 import struct
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class Packet:
     def __init__(self, fields: dict[str, type]) -> None:
         self.fields = fields
+        self.additional_data: dict[str, bytes] = {}
 
     def set(self, name: str, value: Any) -> None:
         if name not in self.fields:
@@ -20,14 +24,30 @@ class Packet:
 
         return self
 
+    def set_additional_data(self, name: str, value: bytes) -> None:
+        self.additional_data[name] = value
+
+    def get_additional_data(self, name: str) -> bytes:
+        return self.additional_data[name]
+
     def get(self, name: str) -> Any:
         if name not in self.fields:
             raise ValueError(f"Unknown field: {name}")
 
         return self.__getattribute__(name)
 
+    def convert_additional_data(self) -> bytes:
+        data = b""
+        for k, v in self.additional_data.items():
+            data += struct.pack("I", len(k))
+            data += k.encode("utf-8")
+            data += struct.pack("I", len(v))
+            data += v
+        return data
+
     def __str__(self) -> str:
-        d = {}
+        d = {"additional_fields": list(self.additional_data.keys())}
+        print(d["additional_fields"], "ADDITIONAL FIELDS")
 
         for field in self.fields:
             try:
@@ -40,15 +60,18 @@ class Packet:
             except:
                 pass
 
+        print(d, "STRINGIFIED DATA")
         return json.dumps(d)
 
-    def from_json(self, data: str | dict) -> "Packet":
+    def from_json(
+        self, data: str | dict, additional_data: dict[str, bytes] = {}
+    ) -> "Packet":
         if type(data) is str:
             try:
                 data = json.loads(data)
             except:
                 return None
-            
+
         for field in self.fields:
             try:
                 if "_parse_" + field in self.__class__.__dict__:
@@ -60,6 +83,9 @@ class Packet:
                     self.set(field, self.fields[field](data[field]))
             except:
                 pass
+
+        for k, v in additional_data.items():
+            self.set_additional_data(k, v)
 
         return self
 
@@ -85,6 +111,8 @@ class Node:
     Can be used as broadcast or/and listen node. Use methods `create_broadcaster` and `create_listener`
     """
 
+    MAX_OK_WAITING_TIME = 5
+
     def __init__(self, port: int, node_name: str = "changeme") -> None:
         self.port = port
         self.name = node_name
@@ -95,6 +123,9 @@ class Node:
         self.sock = None
 
         self.topics: dict[str, Packet] = {}
+
+        self.is_last_success = True
+        self.is_last_error = False
 
     def run(self, max_retries: int = None) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -125,16 +156,16 @@ class Node:
         t = threading.Thread(target=self._listener, args=(self.sock,), daemon=True)
         t.start()
         return t
-    
+
     def _listener(self, socket: socket.socket) -> None:
         while True:
             try:
-                data = self._recv(socket).decode("utf-8")
+                data, additional = self._recv(socket)
                 data = json.loads(data)
             except:
                 continue
 
-            self._process_message(data)
+            self._process_message(data, additional)
 
     def _search_for_handler(self, name: str):
         self.logger.debug(f"Searching for handler: {name}")
@@ -145,70 +176,103 @@ class Node:
                 return x.__dict__[name]
             elif name in x.__class__.__dict__:
                 return x.__class__.__dict__[name]
-        
+
         return None
-    
-    def _process_message(self, data: dict) -> None:
+
+    def _process_message(self, data: dict, additional_data: bytes) -> None:
         try:
             if "type" in data:
                 h = self._search_for_handler("_handle_" + data["type"])
                 if h:
                     self.logger.debug(f"Got handler {h}")
-                    h(self, data)
+                    h(self, data, additional_data)
                 else:
                     self.logger.debug("Got unknown message type")
 
             elif "status" in data:
                 if data["status"] == "error":
                     self.logger.error(f"Error: {data['solve']}")
+
+                    self.is_last_success = False
+                    self.is_last_error = True
                 else:
                     self.logger.debug(data["status"], data)
+
+                    self.is_last_success = True
+                    self.is_last_error = False
 
             else:
                 self.logger.debug("Got unknown message format")
         except Exception as e:
             self.logger.debug(e)
 
-    def _send(self, socket: socket.socket, data: bytes | str) -> None:
+    def _send(
+        self, socket: socket.socket, data: bytes | str, additional_data: bytes = b""
+    ) -> None:
         if type(data) == str:
             data = data.encode("utf-8")
 
-        data_len = len(data)
-        data_len = struct.pack("i", data_len)
-        socket.send(data_len)
-        socket.send(encode_data(data))
+        n = 0
+        while not (self.is_last_success or self.is_last_error) and (self.MAX_OK_WAITING_TIME > 0.05 * n):
+            n += 1
+            time.sleep(0.05)
 
-    def _recv(self, socket: socket.socket) -> bytes:
-        data_len = socket.recv(4)
-        data_len = struct.unpack("i", data_len)[0]
-        return decode_data(socket.recv(data_len))
+        print("DATA LEN IN SEND", len(data), len(additional_data))
+
+        data = encode_data(data)
+        additional_data = encode_data(additional_data)
+
+        data_len = len(data)
+        data_len = struct.pack("I", data_len)
+
+        additional_data_len = len(additional_data)
+        additional_data_len = struct.pack("I", additional_data_len)
+
+        self.is_last_error = False
+        self.is_last_success = False
+
+        socket.send(data_len + additional_data_len + data + additional_data)
+
+    def _recv(self, conn: socket.socket) -> tuple[bytes, bytes]:
+        data_len = conn.recv(4)
+        data_len = struct.unpack("I", data_len)[0]
+
+        additional_data_len = conn.recv(4)
+        additional_data_len = struct.unpack("I", additional_data_len)[0]
+
+        string_data = conn.recv(data_len)
+        additional_data = conn.recv(additional_data_len)
+
+        return decode_data(string_data), decode_data(additional_data)
 
     #
-    def _handle_send_direct(self, data: dict):
+    def _handle_send_direct(self, data: dict, additional_data: bytes):
         """
         Handle direct message from other node
         """
 
-    def _handle_publish(self, data: dict):
+    def _handle_publish(self, data: dict, additional_data: bytes):
         """
         Handle data from publisher node
         """
 
         try:
-            packet = PublishPacket().from_json(data)
+            additional_data = parse_additional_data(additional_data)
+            packet = PublishPacket().from_json(data, additional_data)
+            
             self.logger.debug(f"Got packet: {packet}")
             topic = packet.get("topic")
 
             handler = self._search_for_handler("handle_" + topic)
             if handler:
                 self.logger.debug(f"Got handler for topic: {topic} {handler}")
-                handler(self, json.loads(packet.get("packet")))
+                handler(self, json.loads(packet.get("packet")), additional_data)
             else:
                 self.logger.debug(f"Got packet for unknown topic: {topic}")
         except Exception as e:
             self.logger.debug(e)
 
-    def _handle_topic_closed(self, data: dict):
+    def _handle_topic_closed(self, data: dict, additional_data: bytes):
         topic = data["topic"]
         self.logger.debug(f"Topic {topic} closed")
 
@@ -225,6 +289,7 @@ class Node:
         self._send(
             self.sock,
             json.dumps({"type": "create_topic", "data": topic_packet.__str__()}),
+            b"",
         )
 
     def publish(self, packet: Packet, topic_name: str) -> None:
@@ -235,9 +300,17 @@ class Node:
         topic_packet = PublishPacket()
         topic_packet.set("packet", str(packet))
         topic_packet.set("topic", topic_name)
+        
+        pack = json.dumps({"type": "publish", "data": str(topic_packet)})
+        add = packet.convert_additional_data()
+        
+        print(len(add), "ADDITIONAL DATA IN PUBLISH")
+        print(len(pack), "PACKET IN PUBLISH")
 
         self._send(
-            self.sock, json.dumps({"type": "publish", "data": str(topic_packet)})
+            self.sock,
+            pack,
+            add,
         )
 
     def subscribe(self, topic_name: str) -> None:
@@ -245,7 +318,9 @@ class Node:
         packet.set("topic", topic_name)
 
         self._send(
-            self.sock, json.dumps({"type": "subscribe", "data": str(packet)})
+            self.sock,
+            json.dumps({"type": "subscribe", "data": str(packet)}),
+            b"",
         )
 
     def unsubscribe(self, topic_name: str) -> None:
@@ -253,8 +328,11 @@ class Node:
         packet.set("topic", topic_name)
 
         self._send(
-            self.sock, json.dumps({"type": "unsubscribe", "data": str(packet)})
+            self.sock,
+            json.dumps({"type": "unsubscribe", "data": str(packet)}),
+            b"",
         )
+
 
 class Server:
     """
@@ -289,14 +367,14 @@ class Server:
         t = threading.Thread(target=self._run, daemon=True)
         t.start()
         return t
-    
+
     def _run(self):
         while True:
             conn, addr = self.sock.accept()
             threading.Thread(target=self._handle, args=(conn, addr)).start()
 
     def _handle(self, conn: socket.socket, addr: tuple[str, int]) -> None:
-        auth_data = self._recv(conn).decode("utf-8")
+        auth_data = self._recv(conn)[0].decode("utf-8")
         auth_data = json.loads(auth_data)
 
         if auth_data["name"] not in self.connections:
@@ -310,17 +388,22 @@ class Server:
                 ),
             )
 
+        # if True:
         try:
             while True:
                 try:
-                    data = self._recv(conn).decode("utf-8")
+                    data, additional = self._recv(conn)
+
+                    print(len(data))
+                    print(len(additional))
                     data = json.loads(data)
                 except ConnectionResetError as e:
                     break
-                except:
+                except Exception as e:
+                    self.logger.debug(e)
                     continue
 
-                self._message(conn, data)
+                self._message(conn, data, additional)
 
         except Exception as e:
             self.logger.debug(e)
@@ -348,24 +431,24 @@ class Server:
         for topic in to_delete:
             self.topics.pop(topic)
 
-    def _message(self, conn: socket.socket, data: dict):
+    def _message(self, conn: socket.socket, data: dict, additional_data: bytes):
         try:
             ddata = json.loads(data["data"])
         except:
             return
-        
+
         match data["type"]:
             case "create_topic":
-                self._create_topic(conn, ddata)
+                self._create_topic(conn, ddata, additional_data)
 
             case "subscribe":
-                self._subscribe(conn, ddata)
+                self._subscribe(conn, ddata, additional_data)
 
             case "unsubscribe":
-                self._unsubscribe(conn, ddata)
+                self._unsubscribe(conn, ddata, additional_data)
 
             case "publish":
-                self._publish(conn, ddata)
+                self._publish(conn, ddata, additional_data)
 
             case "send_direct":
                 self._send_direct(conn, ddata)
@@ -390,26 +473,31 @@ class Server:
                 )
 
     # low-level
-    def _send(self, conn: socket.socket, data: bytes | str) -> None:
+    def _send(
+        self, conn: socket.socket, data: bytes | str, additional_data: bytes = b""
+    ) -> None:
         if type(data) == str:
             data = data.encode("utf-8")
 
-        data_len = struct.pack("i", len(data))
-        conn.send(data_len)
-        conn.send(encode_data(data))
+        data = encode_data(data)
+        additional_data = encode_data(additional_data)
 
-    def _recv(self, conn: socket.socket) -> bytes:
+        data_len = struct.pack("I", len(data))
+        additional_data_len = struct.pack("I", len(additional_data))
+
+        conn.send(data_len + additional_data_len + data + additional_data)
+
+    def _recv(self, conn: socket.socket) -> tuple[bytes, bytes]:
         data_len = conn.recv(4)
-        data_len = struct.unpack("i", data_len)[0]
-        return decode_data(conn.recv(data_len))
+        data_len = struct.unpack("I", data_len)[0]
 
-    def _parse_packet(self, data: dict, p_type: type = Packet) -> Packet:
-        try:
-            return p_type().from_json(data["data"])
+        additional_data_len = conn.recv(4)
+        additional_data_len = struct.unpack("I", additional_data_len)[0]
 
-        except Exception as e:
-            self.logger.debug(f"Failed to parse packet: {e}")
-            return None
+        string_data = conn.recv(data_len)
+        additional_data = conn.recv(additional_data_len)
+
+        return decode_data(string_data), decode_data(additional_data)
 
     def _get_name_by_socket(self, socket: socket.socket) -> str:
         for k, v in self.connections.items():
@@ -417,7 +505,7 @@ class Server:
                 return k
 
     # high-level
-    def _create_topic(self, socket: socket.socket, data: dict) -> None:
+    def _create_topic(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
         packet = CreateTopicPacket().from_json(data)
 
         if packet.topic in self.topics:
@@ -444,7 +532,7 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _subscribe(self, socket: socket.socket, data: dict) -> None:
+    def _subscribe(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
         packet = SubscribePacket().from_json(data)
 
         if packet.topic not in self.topics:
@@ -462,7 +550,7 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _unsubscribe(self, socket: socket.socket, data: dict) -> None:
+    def _unsubscribe(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
         packet = UnsubscribePacket().from_json(data)
 
         if packet.topic not in self.topics:
@@ -480,8 +568,8 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _publish(self, socket: socket.socket, data: dict) -> None:
-        packet = PublishPacket().from_json(data)
+    def _publish(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
+        packet = PublishPacket().from_json(data, parse_additional_data(additional_data))
 
         if packet.topic not in self.topics:
             self._send(
@@ -492,7 +580,7 @@ class Server:
             )
             return
 
-        self.topics[packet.topic].publish(packet.packet, self)
+        self.topics[packet.topic].publish(packet.packet, additional_data, self)
 
         self.logger.debug(f"Published packet to topic: {str(packet.topic)}")
 
@@ -525,6 +613,7 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
+
 class Topic:
     def __init__(self, name: str, owner: str, packet: Packet) -> None:
         self.name = name
@@ -532,10 +621,12 @@ class Topic:
         self.owner = owner
         self.packet = packet
 
-        self.logger = logging.getLogger(name+":"+owner)
+        self.logger = logging.getLogger(name + ":" + owner)
 
-    def publish(self, packet: Packet, root: Server) -> None:
-        self.logger.debug(f"Publishing packet to {len(self.subscribers)} subscribers ({self.name})")
+    def publish(self, packet: Packet, additional_data: bytes, root: Server) -> None:
+        self.logger.debug(
+            f"Publishing packet to {len(self.subscribers)} subscribers ({self.name})"
+        )
 
         success = 0
         for subscriber in self.subscribers:
@@ -549,7 +640,8 @@ class Topic:
                             "topic": self.name,
                             "packet": packet,
                         }
-                    ).encode("utf-8"),
+                    ),
+                    additional_data,
                 )
                 success += 1
 
@@ -576,7 +668,7 @@ class Topic:
                         "from": self.owner,
                         "topic": self.name,
                     }
-                )    
+                ),
             )
 
     def __str__(self) -> str:
@@ -639,6 +731,29 @@ class PublishPacket(Packet):
     def __init__(self):
         super().__init__({"topic": str, "packet": str})
 
+    def from_json(self, data, additional_data = {}):
+        if type(data) is str:
+            try:
+                data = json.loads(data)
+            except:
+                return None
+
+        for field in self.fields:
+            try:
+                if "_parse_" + field in self.__class__.__dict__:
+                    self.set(
+                        field,
+                        self.__class__.__dict__["_parse_" + field](self, data[field]),
+                    )
+                else:
+                    self.set(field, self.fields[field](data[field]))
+            except:
+                pass
+
+        self.additional_data = additional_data
+
+        return self
+
 
 class SendDirectPacket(Packet):
     def __init__(self):
@@ -648,5 +763,23 @@ class SendDirectPacket(Packet):
 def encode_data(data: bytes):
     return data
 
+
 def decode_data(data: bytes):
     return data
+
+def parse_additional_data(data: bytes) -> dict[str, bytes]:
+    if len(data) < 5:
+        return {}
+    
+    parsed: dict[str, bytes] = {}
+    while len(data) > 0:
+        length1 = struct.unpack("I", data[:4])[0]
+        name = data[4:4 + length1].decode()
+        
+        length2 = struct.unpack("I", data[4 + length1 : 8 + length1])[0]
+        value = data[8 + length1 : 8 + length1 + length2]
+        
+        parsed[name] = value
+        data = data[8 + length1 + length2 :]
+
+    return parsed
