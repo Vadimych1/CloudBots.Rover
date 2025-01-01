@@ -1,0 +1,3 @@
+miniros() {
+    python -m miniros "$@"
+}

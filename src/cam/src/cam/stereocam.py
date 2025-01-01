@@ -1,9 +1,10 @@
-import numpy, cv2
+import os
+if "openni_lib" not in os.listdir():
+    print("openni_lib not found. Download openni from https://structure.io/openni/ and put it in this folder")
+
+import cv2
 from openni import openni2
-from miniros.source import Node
-from miniros.builtin_datatypes import Image
-import time
-from PIL import Image as pilimg
+import numpy
 
 openni2.initialize("openni_lib")
 
@@ -88,55 +89,3 @@ class StereoCam:
         frame = numpy.frombuffer(buf, dtype=numpy.uint8)
         frame = frame.reshape((q.height, q.width, 2))
         return frame[:,:,0], frame[:,:,1]
-
-FPS = 20
-if __name__ == "__main__":
-    cam = StereoCam(0, initVideo = False)
-    # cam = StereoCam(0)
-
-    cam.start_depth()
-    cam.start_ir()
-    # cam.start_video()
-
-    node = Node(4532, "stereocam")
-    node.run()
-
-    node.create_topic(Image(), "stereocam_depth")
-    # node.create_topic(Image(), "stereocam_ir")
-
-    t = time.time()
-    while True:
-        d1, d2 = cam.get_depth()
-        # ir1, ir2 = cam.get_ir()
-        # col = cam.get_color() # fix this
-
-        try:
-            pack = Image()
-            
-            im = pilimg.fromarray(d1, mode="L").convert("RGB")
-            pack.load_image(im)
-            node.publish(pack, "stereocam_depth")
-
-            # im = pilimg.fromarray(ir1, mode="L").convert("RGB")
-            # print(im)
-            # pack.load_image(im)
-            # node.publish(pack, "stereocam_ir")
-        except Exception as e:
-            print(e)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-
-        q = time.time()
-        print(q - t, "waiting")
-        if (q - t) < 1/FPS:
-            time.sleep(1/FPS - (q - t))
-
-        t = q
-
-    node.stop()
-    
-    # cam.stop_video()
-    cam.stop_depth()
-    cv2.destroyAllWindows()
-    openni2.unload()

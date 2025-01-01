@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: cam
+Version: 1.0.0
+Summary: Cam package
+Author-email: Vadimych1 <vadimlebedenko0@gmail.com>
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: None
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+CHANGE ME

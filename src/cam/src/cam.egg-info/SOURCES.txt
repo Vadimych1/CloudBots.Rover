@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+src/cam/__init__.py
+src/cam/__main__.py
+src/cam/datatypes.py
+src/cam/source.py
+src/cam/stereocam.py
+src/cam.egg-info/PKG-INFO
+src/cam.egg-info/SOURCES.txt
+src/cam.egg-info/dependency_links.txt
+src/cam.egg-info/top_level.txt

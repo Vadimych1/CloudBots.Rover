@@ -2,11 +2,11 @@
 miniros - пакет, основанный на принципах ROS. Выполняет ту-же функцию, что и ROS - передача данных между нодами. Для использования пакета:
 - в консоли Windows/PowerShell
 ```
-./build
+./build @REM or ./build.bat
 ```
-- на Linux: для начала сделайте ./build на Windows-машине, перенесите файл miniros/dist/miniros-...-none-any.whl на Linux-машину и установите его с помощью:
-```sh
-pip3 install miniros-...-none-any.whl
+- на Linux
+```
+sh ./build.sh
 ```
 
 # Использование
@@ -28,3 +28,18 @@ python -m miniros --help
 ```
 
 Выведутся все доступные команды.
+
+# Tools
+В папке Tools можно найти несколько полезных файлов:
+1. miniros.bat - если добавить его в переменную PATH на Windows, можно запускать miniros без python -m:
+```
+miniros ...
+```
+2. miniros.sh - то же, что и miniros.bat, но для Linux-систем, и для использования нужно:
+```bash
+source miniros.sh
+```
+Для того, чтобы каждый раз не писать source miniros.sh:
+```bash
+echo "source path/to/miniros.sh" >> ~/.bashrc
+```

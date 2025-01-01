@@ -47,7 +47,6 @@ class Packet:
 
     def __str__(self) -> str:
         d = {"additional_fields": list(self.additional_data.keys())}
-        print(d["additional_fields"], "ADDITIONAL FIELDS")
 
         for field in self.fields:
             try:
@@ -60,7 +59,6 @@ class Packet:
             except:
                 pass
 
-        print(d, "STRINGIFIED DATA")
         return json.dumps(d)
 
     def from_json(
@@ -113,7 +111,7 @@ class Node:
 
     MAX_OK_WAITING_TIME = 5
 
-    def __init__(self, port: int, node_name: str = "changeme") -> None:
+    def __init__(self, port: int = 4532, node_name: str = "changeme") -> None:
         self.port = port
         self.name = node_name
         self.sock = None
@@ -217,7 +215,7 @@ class Node:
             n += 1
             time.sleep(0.05)
 
-        print("DATA LEN IN SEND", len(data), len(additional_data))
+        self.logger.debug("DATA LEN IN SEND", len(data), len(additional_data))
 
         data = encode_data(data)
         additional_data = encode_data(additional_data)
@@ -304,8 +302,8 @@ class Node:
         pack = json.dumps({"type": "publish", "data": str(topic_packet)})
         add = packet.convert_additional_data()
         
-        print(len(add), "ADDITIONAL DATA IN PUBLISH")
-        print(len(pack), "PACKET IN PUBLISH")
+        self.logger.debug(f"{len(add)} ADDITIONAL DATA IN PUBLISH")
+        self.logger.debug(f"{len(pack)} PACKET IN PUBLISH")
 
         self._send(
             self.sock,
@@ -394,8 +392,8 @@ class Server:
                 try:
                     data, additional = self._recv(conn)
 
-                    print(len(data))
-                    print(len(additional))
+                    self.logger.debug(f"Data len {len(data)}")
+                    self.logger.debug(f"Additional data len {len(additional)}")
                     data = json.loads(data)
                 except ConnectionResetError as e:
                     break
