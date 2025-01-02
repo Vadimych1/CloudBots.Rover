@@ -98,6 +98,9 @@ if args.package:
 
     match args.package:
         case "run":
+            logging.warning(f"`run` command is not fully supported now. Use `python -m {args.package_name}` instead")
+            quit(0)
+            
             if not search_for_package(args.package_name):
                 parser.error("Package not found")
             else:
@@ -208,14 +211,14 @@ if args.package:
                     f.write(DEFAULT_LICENSE)
 
                 with open(f"./src/{args.package_name}/src/{args.package_name}/source.py", "w") as f:
-                    f.write("# put your source code here")
-                    f.write("# you can delete this file and replace it with your own, but")
-                    f.write("# it`s NOT recommended")
+                    f.write("# put your source code here \n")
+                    f.write("# you can delete this file and replace it with your own, but\n")
+                    f.write("# it`s NOT recommended\n")
 
                 with open(f"./src/{args.package_name}/src/{args.package_name}/datatypes.py", "w") as f:
-                    f.write("# put your datatypes here (Packets)")
-                    f.write("# you can delete this file and replace it with your own, but")
-                    f.write("# it`s NOT recommended")
+                    f.write("# put your datatypes here (Packets)\n")
+                    f.write("# you can delete this file and replace it with your own, but\n")
+                    f.write("# it`s NOT recommended\n")
 
                 logging.info("Created package in ./src/%s" % args.package_name)
                 logging.info("")
