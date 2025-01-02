@@ -7,11 +7,31 @@ import cv2
 from PIL import Image as pilimg
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--port", type=int, default=4532, help="Port number to use", metavar="<int>")
-parser.add_argument("--no_stereocam_video_stream", action="store_true", default=False, help="Don`t run stereocam video stream")
-parser.add_argument("--cam_index", type=int, default=0, help="Camera index to use", metavar="<int>")
-parser.add_argument("--stereo", action="store_true", default=False, help="Create stereo camera publisher")
-parser.add_argument("--prefix", type=str, default="", help="Prefix for topics and nodes", metavar="<str>")
+parser.add_argument(
+    "--port", type=int, default=4532, help="Port number to use", metavar="<int>"
+)
+parser.add_argument(
+    "--no_stereocam_video_stream",
+    action="store_true",
+    default=False,
+    help="Don`t run stereocam video stream",
+)
+parser.add_argument(
+    "--cam_index", type=int, default=0, help="Camera index to use", metavar="<int>"
+)
+parser.add_argument(
+    "--stereo",
+    action="store_true",
+    default=False,
+    help="Create stereo camera publisher",
+)
+parser.add_argument(
+    "--prefix",
+    type=str,
+    default="",
+    help="Prefix for topics and nodes",
+    metavar="<str>",
+)
 parser.add_argument("--fps", type=int, default=30, help="FPS", metavar="<int>")
 args = parser.parse_args()
 

@@ -5,9 +5,17 @@ import logging
 import threading
 import time
 import struct
+import os
+import dotenv
+
+# dotenv.load_dotenv(verbose=True) # loads .env file from cwd
+
+is_debug = dotenv.get_key("./.env/", "DEBUG") == "1"
+if is_debug:
+    print("Running in debug mode")
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG if is_debug else logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
@@ -211,7 +219,9 @@ class Node:
             data = data.encode("utf-8")
 
         n = 0
-        while not (self.is_last_success or self.is_last_error) and (self.MAX_OK_WAITING_TIME > 0.05 * n):
+        while not (self.is_last_success or self.is_last_error) and (
+            self.MAX_OK_WAITING_TIME > 0.05 * n
+        ):
             n += 1
             time.sleep(0.05)
 
@@ -257,7 +267,7 @@ class Node:
         try:
             additional_data = parse_additional_data(additional_data)
             packet = PublishPacket().from_json(data, additional_data)
-            
+
             self.logger.debug(f"Got packet: {packet}")
             topic = packet.get("topic")
 
@@ -298,10 +308,10 @@ class Node:
         topic_packet = PublishPacket()
         topic_packet.set("packet", str(packet))
         topic_packet.set("topic", topic_name)
-        
+
         pack = json.dumps({"type": "publish", "data": str(topic_packet)})
         add = packet.convert_additional_data()
-        
+
         self.logger.debug(f"{len(add)} ADDITIONAL DATA IN PUBLISH")
         self.logger.debug(f"{len(pack)} PACKET IN PUBLISH")
 
@@ -503,7 +513,9 @@ class Server:
                 return k
 
     # high-level
-    def _create_topic(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
+    def _create_topic(
+        self, socket: socket.socket, data: dict, additional_data: bytes
+    ) -> None:
         packet = CreateTopicPacket().from_json(data)
 
         if packet.topic in self.topics:
@@ -530,7 +542,9 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _subscribe(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
+    def _subscribe(
+        self, socket: socket.socket, data: dict, additional_data: bytes
+    ) -> None:
         packet = SubscribePacket().from_json(data)
 
         if packet.topic not in self.topics:
@@ -548,7 +562,9 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _unsubscribe(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
+    def _unsubscribe(
+        self, socket: socket.socket, data: dict, additional_data: bytes
+    ) -> None:
         packet = UnsubscribePacket().from_json(data)
 
         if packet.topic not in self.topics:
@@ -566,7 +582,9 @@ class Server:
 
         self._send(socket, json.dumps({"status": "ok"}).encode("utf-8"))
 
-    def _publish(self, socket: socket.socket, data: dict, additional_data: bytes) -> None:
+    def _publish(
+        self, socket: socket.socket, data: dict, additional_data: bytes
+    ) -> None:
         packet = PublishPacket().from_json(data, parse_additional_data(additional_data))
 
         if packet.topic not in self.topics:
@@ -729,7 +747,7 @@ class PublishPacket(Packet):
     def __init__(self):
         super().__init__({"topic": str, "packet": str})
 
-    def from_json(self, data, additional_data = {}):
+    def from_json(self, data, additional_data={}):
         if type(data) is str:
             try:
                 data = json.loads(data)
@@ -765,18 +783,19 @@ def encode_data(data: bytes):
 def decode_data(data: bytes):
     return data
 
+
 def parse_additional_data(data: bytes) -> dict[str, bytes]:
     if len(data) < 5:
         return {}
-    
+
     parsed: dict[str, bytes] = {}
     while len(data) > 0:
         length1 = struct.unpack("I", data[:4])[0]
-        name = data[4:4 + length1].decode()
-        
+        name = data[4 : 4 + length1].decode()
+
         length2 = struct.unpack("I", data[4 + length1 : 8 + length1])[0]
         value = data[8 + length1 : 8 + length1 + length2]
-        
+
         parsed[name] = value
         data = data[8 + length1 + length2 :]
 

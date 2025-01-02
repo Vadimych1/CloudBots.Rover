@@ -7,22 +7,60 @@ import shutil
 import colorama
 
 colorama.init(autoreset=True)
-logging.basicConfig(level=logging.INFO, format=colorama.Style.BRIGHT + colorama.Fore.BLUE + "%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format=colorama.Style.BRIGHT
+    + colorama.Fore.BLUE
+    + "%(asctime)s - %(levelname)s - %(message)s",
+)
 
 parser = ArgumentParser()
-parser.add_argument("package", type=str, nargs="?", choices=["build", "install", "uninstall", "create", "delete", "run"], default=None, help="Package mode")
-parser.add_argument("package_name", type=str, nargs="?", default=None, help="Package name")
+parser.add_argument(
+    "package",
+    type=str,
+    nargs="?",
+    choices=["build", "install", "uninstall", "create", "delete", "run"],
+    default=None,
+    help="Package mode",
+)
+parser.add_argument(
+    "package_name", type=str, nargs="?", default=None, help="Package name"
+)
 
 pack_group = parser.add_argument_group("package")
-pack_group.add_argument("--author", type=str, default="Some Author", help="Package authors", metavar="<str>")
-pack_group.add_argument("--description", type=str, default="MiniROS Package", help="Package description", metavar="<str>")
-pack_group.add_argument("--version", type=str, default="1.0.0", help="Package version", metavar="<str>")
-pack_group.add_argument("--email", type=str, default="author@example.com", help="Author email", metavar="<str>")
-pack_group.add_argument("--force", action="store_true", default=False, help="Force package creation")
-pack_group.add_argument("--args", nargs="+", type=str, default="", help="Package arguments", metavar="<str>")
+pack_group.add_argument(
+    "--author", type=str, default="Some Author", help="Package authors", metavar="<str>"
+)
+pack_group.add_argument(
+    "--description",
+    type=str,
+    default="MiniROS Package",
+    help="Package description",
+    metavar="<str>",
+)
+pack_group.add_argument(
+    "--version", type=str, default="1.0.0", help="Package version", metavar="<str>"
+)
+pack_group.add_argument(
+    "--email",
+    type=str,
+    default="author@example.com",
+    help="Author email",
+    metavar="<str>",
+)
+pack_group.add_argument(
+    "--force", action="store_true", default=False, help="Force package creation"
+)
+pack_group.add_argument(
+    "--args", nargs="+", type=str, default="", help="Package arguments", metavar="<str>"
+)
 
-parser.add_argument("--secure", action="store_true", default=False, help="Enable secure mode")
-parser.add_argument("--port", type=int, default=4532, help="Port number to use", metavar="<int>")
+parser.add_argument(
+    "--secure", action="store_true", default=False, help="Enable secure mode"
+)
+parser.add_argument(
+    "--port", type=int, default=4532, help="Port number to use", metavar="<int>"
+)
 
 args = parser.parse_args()
 
@@ -45,28 +83,32 @@ classifiers = [
 ]
 """
 
+
 def search_for_package(package_name: str):
     if not os.path.exists("./src"):
         return False
-    
+
     d = os.listdir("./src/")
     for x in d:
         if x == package_name:
             return True
     return False
 
+
 def install(package_name):
     if not os.path.exists("src/%s/dist" % package_name):
         logging.warning("Package is not built. Build it now?")
 
-        while (create_or_not := input(": Do you want to continue? (y/n) ")) not in ["y", "n"]:
+        while (create_or_not := input(": Do you want to continue? (y/n) ")) not in [
+            "y",
+            "n",
+        ]:
             continue
 
         if create_or_not == "n":
             quit(0)
 
         build(package_name)
-
 
     whl = ""
     directory = os.listdir("./src/%s/dist" % package_name)
@@ -82,7 +124,8 @@ def install(package_name):
     os.system("cd ..")
 
     return True
-        
+
+
 def build(package_name: str):
     c = os.system("cd src/%s && python -m build && cd .." % package_name)
 
@@ -92,15 +135,18 @@ def build(package_name: str):
 
     logging.info("Package built successfully")
 
+
 if args.package:
     if not args.package_name:
         parser.error("Argument package_name is required")
 
     match args.package:
         case "run":
-            logging.warning(f"`run` command is not fully supported now. Use `python -m {args.package_name}` instead")
+            logging.warning(
+                f"`run` command is not fully supported now. Use `python -m {args.package_name}` instead"
+            )
             quit(0)
-            
+
             if not search_for_package(args.package_name):
                 parser.error("Package not found")
             else:
@@ -114,7 +160,7 @@ if args.package:
                 logging.info("Deleting package...")
                 shutil.rmtree("./src/%s" % args.package_name)
                 os.system("pip uninstall %s" % args.package_name)
-        
+
         case "build":
             if not search_for_package(args.package_name):
                 parser.error("Package not found")
@@ -159,11 +205,19 @@ if args.package:
         case "create":
             if search_for_package(args.package_name) and not args.force:
                 parser.error("Package already exists")
-                logging.info("If you want to recreate this package, run `miniros create --force %s`" % args.package_name)
+                logging.info(
+                    "If you want to recreate this package, run `miniros create --force %s`"
+                    % args.package_name
+                )
             else:
                 if search_for_package(args.package_name) and args.force:
-                    while (create_or_not := input(": Program will recreate package in ./src/%s\nDo you want to continue (all data will be lost)? (y/n) " % args.package_name)) not in ["y", "n"]:
-                            continue
+                    while (
+                        create_or_not := input(
+                            ": Program will recreate package in ./src/%s\nDo you want to continue (all data will be lost)? (y/n) "
+                            % args.package_name
+                        )
+                    ) not in ["y", "n"]:
+                        continue
 
                     if create_or_not == "n":
                         quit(0)
@@ -171,7 +225,12 @@ if args.package:
                     shutil.rmtree("./src/%s" % args.package_name)
 
                 else:
-                    while (create_or_not := input(": Program will create package in ./src/%s\nDo you want to continue? (y/n) " % args.package_name)) not in ["y", "n"]:
+                    while (
+                        create_or_not := input(
+                            ": Program will create package in ./src/%s\nDo you want to continue? (y/n) "
+                            % args.package_name
+                        )
+                    ) not in ["y", "n"]:
                         continue
 
                     if create_or_not == "n":
@@ -188,45 +247,84 @@ if args.package:
                 if not os.path.exists("./src/%s/src" % args.package_name):
                     os.mkdir("./src/%s/src" % args.package_name)
 
-                if not os.path.exists("./src/%s/src/%s" % (args.package_name, args.package_name)):
+                if not os.path.exists(
+                    "./src/%s/src/%s" % (args.package_name, args.package_name)
+                ):
                     os.mkdir("./src/%s/src/%s" % (args.package_name, args.package_name))
 
-
-                with open(f"./src/{args.package_name}/src/{args.package_name}/__init__.py", "w") as f:
+                with open(
+                    f"./src/{args.package_name}/src/{args.package_name}/__init__.py",
+                    "w",
+                ) as f:
                     f.write("")
 
-                with open(f"./src/{args.package_name}/src/{args.package_name}/__init__.py", "w") as f:
+                with open(
+                    f"./src/{args.package_name}/src/{args.package_name}/__init__.py",
+                    "w",
+                ) as f:
                     f.write("")
 
-                with open(f"./src/{args.package_name}/src/{args.package_name}/__main__.py", "w") as f:
+                with open(
+                    f"./src/{args.package_name}/src/{args.package_name}/__main__.py",
+                    "w",
+                ) as f:
                     f.write("# put code here to run it like MiniROS package")
 
                 with open(f"./src/{args.package_name}/README.md", "w") as f:
                     f.write(DEFAULT_README)
 
                 with open(f"./src/{args.package_name}/pyproject.toml", "w") as f:
-                    f.write(DEFAULT_PYPROJECT % {"name": args.package_name, "version": args.version, "author_name": args.author, "email": args.email, "description": args.description})
-                
+                    f.write(
+                        DEFAULT_PYPROJECT
+                        % {
+                            "name": args.package_name,
+                            "version": args.version,
+                            "author_name": args.author,
+                            "email": args.email,
+                            "description": args.description,
+                        }
+                    )
+
                 with open(f"./src/{args.package_name}/LICENSE", "w") as f:
                     f.write(DEFAULT_LICENSE)
 
-                with open(f"./src/{args.package_name}/src/{args.package_name}/source.py", "w") as f:
+                with open(
+                    f"./src/{args.package_name}/src/{args.package_name}/source.py", "w"
+                ) as f:
                     f.write("# put your source code here \n")
-                    f.write("# you can delete this file and replace it with your own, but\n")
+                    f.write(
+                        "# you can delete this file and replace it with your own, but\n"
+                    )
                     f.write("# it`s NOT recommended\n")
 
-                with open(f"./src/{args.package_name}/src/{args.package_name}/datatypes.py", "w") as f:
+                with open(
+                    f"./src/{args.package_name}/src/{args.package_name}/datatypes.py",
+                    "w",
+                ) as f:
                     f.write("# put your datatypes here (Packets)\n")
-                    f.write("# you can delete this file and replace it with your own, but\n")
+                    f.write(
+                        "# you can delete this file and replace it with your own, but\n"
+                    )
                     f.write("# it`s NOT recommended\n")
 
                 logging.info("Created package in ./src/%s" % args.package_name)
                 logging.info("")
-                logging.info("Put your package code in ./src/%s/src/%s/source.py" % (args.package_name, args.package_name))
-                logging.info("Put your packets in ./src/%s/src/%s/datatypes.py" % (args.package_name, args.package_name))
-                logging.info("Put your runnable code in ./src/%s/src/%s/__main__.py" % (args.package_name, args.package_name))
+                logging.info(
+                    "Put your package code in ./src/%s/src/%s/source.py"
+                    % (args.package_name, args.package_name)
+                )
+                logging.info(
+                    "Put your packets in ./src/%s/src/%s/datatypes.py"
+                    % (args.package_name, args.package_name)
+                )
+                logging.info(
+                    "Put your runnable code in ./src/%s/src/%s/__main__.py"
+                    % (args.package_name, args.package_name)
+                )
                 logging.info("")
-                logging.info("Don`t forget to change README.md and LICENSE for your own needs.")
+                logging.info(
+                    "Don`t forget to change README.md and LICENSE for your own needs."
+                )
 
     quit(0)
 

@@ -1,0 +1,1 @@
+print("Warning: cam module is very buggy. Engine may be unstable when transiting image over miniros. Use native cam access (cv2.VideoCapture) and cam.stereocam module if needed instead")

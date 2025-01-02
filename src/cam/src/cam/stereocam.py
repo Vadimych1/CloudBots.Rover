@@ -1,6 +1,9 @@
 import os
+
 if "openni_lib" not in os.listdir():
-    print("openni_lib not found. Download openni from https://structure.io/openni/ and put it in this folder")
+    print(
+        "openni_lib not found. Download openni from https://structure.io/openni/ and put it in this folder"
+    )
 
 import cv2
 from openni import openni2
@@ -8,8 +11,9 @@ import numpy
 
 openni2.initialize("openni_lib")
 
+
 class StereoCam:
-    def __init__(self, cam_index: int = None, initVideo = True) -> None:
+    def __init__(self, cam_index: int = None, initVideo=True) -> None:
         self.dev = openni2.Device.open_any()
 
         self.depth_stream = self.dev.create_depth_stream()
@@ -64,13 +68,13 @@ class StereoCam:
         d_image = d_image.reshape(f.height, f.width, 2)
 
         return d_image[:, :, 0], d_image[:, :, 1]
-    
+
     def get_color(self) -> numpy.ndarray:
         """
         Get color image from camera.
         use start_video() before using
         """
-        
+
         ret, frame = self.video_stream.read()
         self.last_cam_ready = ret
 
@@ -88,4 +92,4 @@ class StereoCam:
         buf = q.get_buffer_as_uint8()
         frame = numpy.frombuffer(buf, dtype=numpy.uint8)
         frame = frame.reshape((q.height, q.width, 2))
-        return frame[:,:,0], frame[:,:,1]
+        return frame[:, :, 0], frame[:, :, 1]

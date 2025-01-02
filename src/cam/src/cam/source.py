@@ -1,5 +1,6 @@
 from miniros import source
 
+
 class BaseCamListener(source.Node):
     """
     How to handle incoming data:

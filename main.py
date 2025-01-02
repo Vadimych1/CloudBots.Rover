@@ -1,8 +1,10 @@
-from miniros.builtin_datatypes import Image
-import numpy as np
-import PIL.Image as pilimg
+from miniros.source import Node
+from cam.stereocam import StereoCam
 
-im = Image()
-im.load_image(pilimg.fromarray(np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)))
+class MainNode(Node):
+    def __init__(self, port: int = 4532) -> None:
+        super().__init__(port, "main_node")
 
-print(len(im.convert_additional_data() + str(im).encode()))
+node = MainNode()
+node.run()
+
