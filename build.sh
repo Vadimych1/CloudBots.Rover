@@ -1,6 +1,6 @@
 cd miniros
 rm -rf dist
-python -m build
-pip install ./dist/miniros/miniros-0.0.1-py3-none-any.whl --force-reinstall
+../venv/bin/python -m build
 cd ..
-echo "Done"
+venv/bin/pip install miniros/dist/miniros-0.0.1-py3-none-any.whl --force-reinstall
+echo Done
