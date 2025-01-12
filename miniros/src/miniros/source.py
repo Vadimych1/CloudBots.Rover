@@ -5,12 +5,17 @@ import logging
 import threading
 import time
 import struct
-import os
+from typing import Self
 import dotenv
 
 # dotenv.load_dotenv(verbose=True) # loads .env file from cwd
 
-is_debug = dotenv.get_key("./.env/", "DEBUG") == "1"
+is_debug = False
+try: # windows
+    is_debug = dotenv.get_key("./.env", "DEBUG") == "1"
+except: # linux
+    is_debug = dotenv.get_variable("./.env", "DEBUG") == "1"
+
 if is_debug:
     print("Running in debug mode")
 
@@ -71,7 +76,7 @@ class Packet:
 
     def from_json(
         self, data: str | dict, additional_data: dict[str, bytes] = {}
-    ) -> "Packet":
+    ) -> Self:
         if type(data) is str:
             try:
                 data = json.loads(data)
