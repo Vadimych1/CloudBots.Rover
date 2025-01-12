@@ -1,6 +1,6 @@
 import smbus2
 import time
-from ctypes import c_uint8, c_uint16, c_uint32, c_float
+from ctypes import *
 import math
 
 DEF_CHIP_ID_FLASH		= 0x3C																								#	ID линейки чипов - константа для всех чипов серии Flash (позволяет идентифицировать принадлежность чипа к серии).
@@ -66,6 +66,46 @@ MOT_PWM = 8																									#	setSpeed(скорость, MOT_PWM); getSp
 
 i2c = smbus2.SMBus(1)
 
+
+
+def setSpeedData(valSpeed):
+    data = [0, 0]
+    data[0] = (valSpeed & 0x00FF).to_bytes(1, byteorder='little', signed=True)[0]
+    data[1] = ((valSpeed >> 8) & 0x00FF).to_bytes(1, byteorder='little', signed=True)[0]
+    return data
+
+def getSpeedData(data):
+    valSpeed = float((data[1] << 8) | data[0])
+    return valSpeed
+
+def setPwmData(frequency: int):
+    data = [0, 0]
+    data[0] = (frequency & 0x00FF).to_bytes(1, byteorder='little')[0]
+    data[1] = (frequency >> 8).to_bytes(1, byteorder='little')[0]
+    return data
+
+def setStopData(value: int):
+    data = [0, 0, 0]
+    data[0] = (value & 0x0000FF).to_bytes(1, byteorder='little')[0]
+    data[1] = ((value >> 8) & 0x0000FF).to_bytes(1, byteorder='little')[0]
+    data[2] = ((value >> 16) & 0x0000FF).to_bytes(1, byteorder='little')[0]
+    return data
+
+def getStopData(data):
+    rev = float((data[2] << 16) | (data[1] << 8) | data[0]) / 100.0
+    tmr = float((data[5] << 16) | (data[4] << 8) | data[3])
+    
+    return rev, tmr
+        
+def getStopDataSec(data):
+    result = abs((data[1] << 8) | data[0])
+    if result == 0:
+        result = 1.0
+    else:
+        result = float(result)
+
+    return result
+
 class MotorDriver:
     def __init__(self, i2c: smbus2.SMBus, addr: int, radius: int):
         self.i2c = i2c
@@ -102,14 +142,8 @@ class MotorDriver:
         
     def setFreqPWM(self, frequency: int) -> None:
         if not 1000 < frequency < 25:
-            return
-        
-        data = [
-            c_uint8(frequency & 0x00FF),
-            c_uint8(frequency >> 8)
-        ]
-    
-        self.write(REG_MOT_FREQUENCY_L, data)
+            return        
+        self.write(REG_MOT_FREQUENCY_L, setPwmData(frequency))
     
     def setMagnet(self, n: int) -> None:
         data = [c_uint8(n)]
@@ -121,7 +155,7 @@ class MotorDriver:
     def setError(self, deviation: int) -> None:
         if deviation > 100:
             deviation = 100
-        data = [c_uint8(deviation)]
+        data = [deviation]
         self.write(REG_MOT_MAX_RPM_DEV, data)
     
     def getError(self) -> int:
@@ -155,12 +189,7 @@ class MotorDriver:
         else:
             return
         
-        data = [
-            int(speed) & 0x00FF,
-            (int(speed) >> 8) & 0x00FF
-        ]
-        
-        self.write(reg, data)
+        self.write(reg, setSpeedData(speed))
         
     def setStop(self, value: float, type: int):
         if type == 0xFF:
@@ -177,27 +206,15 @@ class MotorDriver:
                 
             value *= 100
             
-            data = [
-                c_uint32(value) & 0x0000FF,
-                c_uint32(value >> 8) & 0x0000FF,
-                c_uint32(value >> 16) & 0x0000FF
-            ]
-            
-            self.write(REG_MOT_STOP_REV_L, data)
+            self.write(REG_MOT_STOP_REV_L, setStopData(value))
             
         elif type == MOT_REV:
             if value > 167772.15:
                 value = 167772.15
                 
             value *= 100
-            
-            data = [
-                c_uint32(value) & 0x0000FF,
-                c_uint32(value >> 8) & 0x0000FF,
-                c_uint32(value >> 16) & 0x0000FF
-            ]
-            
-            self.write(REG_MOT_STOP_REV_L, data)
+
+            self.write(REG_MOT_STOP_REV_L, setStopData(value))
             
         elif type == MOT_SEC:
             if value > 16777.215:
@@ -205,20 +222,13 @@ class MotorDriver:
             
             value *= 1000
             
-            data = [
-                (value) & 0x0000FF,
-                (value >> 8) & 0x0000FF,
-                (value >> 16) & 0x0000FF
-            ]
-            
-            self.write(REG_MOT_STOP_TMR_L, data)
+            self.write(REG_MOT_STOP_TMR_L, setStopData(value))
             
     def getStop(self, type: int) -> float:
         result = -1
         
         data = self.read(REG_MOT_STOP_REV_L, 6)
-        rev = c_float(c_uint32(data[2] << 16) | c_uint32(data[1] << 8) | c_uint32(data[0])) / 100.0
-        tmr = c_float(c_uint32(data[5] << 16) | c_uint32(data[4] << 8) | c_uint32(data[3])) / 100.0
+        rev, tmr = getStopData(data)
         
         data = self.read(REG_MOT_MAGNET, 1)
         if (data[0] == 0 and (type != MOT_SEC or not tmr)):
@@ -230,8 +240,8 @@ class MotorDriver:
                 
             elif tmr:
                 data = self.read(REG_MOT_GET_RPM_L, 2)
-                result = abs(c_uint16(data[1] << 8) | c_uint16(data[0]))
-                reult = result * tmr / 60000
+                result = getStopDataSec(data)
+                result = result * tmr / 60000
                 
             if type == MOT_MET:
                 result *= 2.0 * math.pi * self.radius 
@@ -242,7 +252,7 @@ class MotorDriver:
                 result = tmr / 1000
             elif rev:
                 data = self.read(REG_MOT_GET_RPM_L, 2)
-                result = abs(c_uint16(data[1] << 8) | c_uint16(data[0]))
+                result = getStopDataSec(data)
                 result = rev * 60.0 / result
                 
         return result
