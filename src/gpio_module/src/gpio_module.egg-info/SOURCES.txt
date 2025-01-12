@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/gpio_module/__init__.py
+src/gpio_module/__main__.py
+src/gpio_module/datatypes.py
+src/gpio_module/source.py
+src/gpio_module.egg-info/PKG-INFO
+src/gpio_module.egg-info/SOURCES.txt
+src/gpio_module.egg-info/dependency_links.txt
+src/gpio_module.egg-info/top_level.txt

@@ -3,3 +3,4 @@ pillow>=11.1.0
 gpio==any
 numpy>=2.2.1
 opecv==any
+colorama==any
