@@ -1,7 +1,8 @@
 import smbus2
 import time
-from ctypes import *
+import ctypes
 import math
+# import sys, os
 
 DEF_CHIP_ID_FLASH		= 0x3C																								#	ID линейки чипов - константа для всех чипов серии Flash (позволяет идентифицировать принадлежность чипа к серии).
 DEF_CHIP_ID_METRO		= 0xC3																								#	ID линейки чипов - константа для всех чипов серии Metro (позволяет идентифицировать принадлежность чипа к серии).
@@ -63,42 +64,57 @@ MOT_REV = 6																									#	setStop(количество, MOT_REV); ge
 MOT_RPM = 7																									#	setSpeed(скорость, MOT_RPM); getSpeed(MOT_RPM);
 MOT_PWM = 8																									#	setSpeed(скорость, MOT_PWM); getSpeed(MOT_PWM);
 
-
 i2c = smbus2.SMBus(1)
+motor_dll = ctypes.cdll.LoadLibrary("libs/motor/motor.so")
 
+# float2
+motor_dll.encodeFloat2.argtypes = [ctypes.c_float, ctypes.c_int]
+motor_dll.encodeFloat2.restype = ctypes.c_uint8
 
+motor_dll.decodeFloat2.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+motor_dll.decodeFloat2.restype = ctypes.c_float
 
+motor_dll.decodeFloat2Abs.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+motor_dll.decodeFloat2.restype = ctypes.c_float
+
+# float3
+motor_dll.encodeFloat3.argtypes = [ctypes.c_float, ctypes.c_int]
+motor_dll.encodeFloat3.restype = ctypes.c_uint8
+
+motor_dll.decodeFloat3.argtypes = [ctypes.c_uint8, ctypes.c_uint8]
+motor_dll.decodeFloat3.restype = ctypes.c_float
+
+        
 def setSpeedData(valSpeed):
-    data = [0, 0]
-    data[0] = (valSpeed & 0x00FF).to_bytes(1, byteorder='little', signed=True)[0]
-    data[1] = ((valSpeed >> 8) & 0x00FF).to_bytes(1, byteorder='little', signed=True)[0]
+    data = [motor_dll.encodeFloat2(valSpeed, 0), motor_dll.encodeFloat2(valSpeed, 1)]    
     return data
 
 def getSpeedData(data):
-    valSpeed = float((data[1] << 8) | data[0])
-    return valSpeed
+    return motor_dll.decodeFloat2(data[0], data[1])
 
 def setPwmData(frequency: int):
+    # ???
     data = [0, 0]
     data[0] = (frequency & 0x00FF).to_bytes(1, byteorder='little')[0]
     data[1] = (frequency >> 8).to_bytes(1, byteorder='little')[0]
     return data
 
-def setStopData(value: int):
-    data = [0, 0, 0]
-    data[0] = (value & 0x0000FF).to_bytes(1, byteorder='little')[0]
-    data[1] = ((value >> 8) & 0x0000FF).to_bytes(1, byteorder='little')[0]
-    data[2] = ((value >> 16) & 0x0000FF).to_bytes(1, byteorder='little')[0]
+def setStopData(value: float):
+    data = [
+        motor_dll.encodeFloat3(value, 0),
+        motor_dll.encodeFloat3(value, 1),
+        motor_dll.encodeFloat3(value, 2),
+    ]
     return data
 
 def getStopData(data):
-    rev = float((data[2] << 16) | (data[1] << 8) | data[0]) / 100.0
-    tmr = float((data[5] << 16) | (data[4] << 8) | data[3])
+    rev = motor_dll.decodeFloat3(data[0], data[1], data[2]) / 100.0
+    tmr = motor_dll.decodeFloat3(data[3], data[4], data[5])
     
     return rev, tmr
         
 def getStopDataSec(data):
-    result = abs((data[1] << 8) | data[0])
+    result = motor_dll.decodeFloat2Abs(data[0], data[1])
     if result == 0:
         result = 1.0
     else:
@@ -146,7 +162,7 @@ class MotorDriver:
         self.write(REG_MOT_FREQUENCY_L, setPwmData(frequency))
     
     def setMagnet(self, n: int) -> None:
-        data = [c_uint8(n)]
+        data = [n]
         self.write(REG_MOT_MAGNET, data)
     
     def getMagnet(self) -> int:
@@ -189,7 +205,10 @@ class MotorDriver:
         else:
             return
         
-        self.write(reg, setSpeedData(speed))
+        q = setSpeedData(speed)
+        print(q)
+        print(getSpeedData(q))
+        self.write(reg, q)
         
     def setStop(self, value: float, type: int):
         if type == 0xFF:
@@ -264,4 +283,14 @@ class MotorDriver:
         self.i2c.write_i2c_block_data(self.addr, reg, data)
     
 m = MotorDriver(i2c, 0x0a, 10)
-m.setSpeed(1, MOT_M_S, 1, MOT_SEC)
+m.setSpeed(1.0, MOT_M_S, 1, MOT_SEC)
+# m.reset()
+
+# print(float_to_bytes(1.0))
+# print(bytes_to_float(float_to_bytes(1)))
+
+# a = motor_dll.encodeFloat2(10.0, 0)
+# b = motor_dll.encodeFloat2(10.0, 1)
+# print(a, b)
+# c = motor_dll.decodeFloat2(a, b)
+# print(c)
