@@ -5,7 +5,7 @@ import math
 # import sys, os
 
 i2c = smbus2.SMBus(1)
-_mot = cdll.LoadLibrary("libs/...") # TODO: change to library location
+_mot = cdll.LoadLibrary("libs/arduino_motor/motor.so") # TODO: change to library location
 
 # Bus index
 _mot.setBus.argtypes = [c_uint8]
@@ -32,7 +32,7 @@ _mot.getPullI2C.restype = c_bool
 
 # Enable/disable pull, Device index
 _mot.setPullI2C.argtypes = [c_bool, c_uint8]
-_mot.setPulli2C.restype = c_bool
+_mot.setPullI2C.restype = c_bool
 
 # Frequency, Device index
 _mot.setFreqPWM.argtypes = [c_uint16, c_uint8]
@@ -97,6 +97,10 @@ _mot.setDirection.restype = c_bool
 _mot.getDirection.argtypes = [c_uint8]
 _mot.getDirection.restype = c_bool
 
+# Device index
+_mot.getVoltage.argtypes = [c_uint8]
+_mot.getVoltage.restype = c_float
+
 # TODO: setInvGear
 # TODO: getInvGear
 # ! TODO: getSum
@@ -111,9 +115,9 @@ def init(bus: int, wh_radius: int):
     _mot.setRadius(wh_radius)
     _mot.init()
 
-last_device_index = 0
+last_device_index = 1
 
-class InitException:
+class InitException(Exception):
     pass
 
 class MotorDriver:
@@ -126,8 +130,8 @@ class MotorDriver:
         
         res = _mot.initDevice(self.addr, self.device_index)
         
-        if not res:
-            raise InitException(f"Error initializing I2C device {self.device_index} (addr:{hex(self.addr)})")
+        # if not res:
+            # raise InitException(f"InitException: Error initializing I2C device {self.device_index} (addr:{hex(self.addr)})")
         
     def reset(self) -> bool:
         return _mot.reset(self.device_index)
@@ -160,7 +164,7 @@ class MotorDriver:
         return _mot.getError(self.device_index)
     
     def setSpeed(self, valSpeed: float, typeSpeed: int, valStop: float, typeStop: int) -> bool:
-        return _mot.setSpeed(valSpeed, typeSpeed, valStop, valSpeed, typeStop, self.device_index)
+        return _mot.setSpeed(valSpeed, typeSpeed, valStop, typeStop, self.device_index)
     
     def getSpeed(self, speedType: int) -> float:
         return _mot.getSpeed(speedType, self.device_index)
@@ -196,7 +200,7 @@ class MotorDriver:
         raise NotImplementedError
 
     def getVoltage(self):
-        raise NotImplementedError
+        return _mot.getVoltage(self.device_index)
     
     def setNominalRPM(self, value: int):
         raise NotImplementedError
@@ -206,16 +210,39 @@ class MotorDriver:
     
     def saveManufacturer(self):
         raise NotImplementedError
+
+if __name__ == "__main__":
+    init(
+        bus=1,
+        wh_radius=50   
+    )
+
+    m1 = MotorDriver(0x0a)
+    m2 = MotorDriver(0x0b)
+    m3 = MotorDriver(0x0c)
+    m4 = MotorDriver(0x0d)
     
-m = MotorDriver(i2c, 0x0a, 10)
-m.setSpeed(1.0, MOT_M_S, 1, MOT_SEC)
-# m.reset()
-
-# print(float_to_bytes(1.0))
-# print(bytes_to_float(float_to_bytes(1)))
-
-# a = motor_dll.encodeFloat2(10.0, 0)
-# b = motor_dll.encodeFloat2(10.0, 1)
-# print(a, b)
-# c = motor_dll.decodeFloat2(a, b)
-# print(c)
+    # m2 = MotorDriver(0x0d)
+    
+    m1.reset()
+    m2.reset()
+    m3.reset()
+    m4.reset()
+    
+    # print(m1.device_index)
+    # print(m2.device_index)
+    
+    # print(m1.getVoltage())
+    # print(m2.getVoltage())
+    
+    # m1.setFreqPWM(0)
+    
+    # print(m1.setSpeed(-5.0, MOT_RPM, 3.0, MOT_SEC))
+    # print(m2.setSpeed(-5.0, MOT_M_S, 3.0, MOT_SEC))
+    print(m3.setSpeed(5.0, MOT_M_S, 3.0, MOT_SEC))
+    print(m4.setSpeed(5.0, MOT_M_S, 3.0, MOT_SEC))
+    
+    # print(m2.setSpeed(1.0, MOT_M_S, 4.0, MOT_MET))
+    
+    # m.setFreqPWM(30)
+    # m.setStop(100, MOT_SEC)
