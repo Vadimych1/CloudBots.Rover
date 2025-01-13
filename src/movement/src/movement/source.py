@@ -1,10 +1,9 @@
-import smbus2
 import time
+from enum import Enum
 from ctypes import *
 import math
-# import sys, os
 
-i2c = smbus2.SMBus(1)
+
 _mot = cdll.LoadLibrary("libs/arduino_motor/motor.so") # TODO: change to library location
 
 # Bus index
@@ -211,38 +210,121 @@ class MotorDriver:
     def saveManufacturer(self):
         raise NotImplementedError
 
+class BaseMultiMotorDriver:
+    """
+    Class for controlling multiple motors at the same time on top-level.
+    :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
+    :@param motor_sides: list of motor directions (True - default/False - reversed)
+    """
+    def __init__(self, motor_addrs: list[int], motor_sides: list[bool]):
+        self.motor_addrs = motor_addrs
+        self.motor_sides = motor_sides
+        self.motors = []
+        
+    def init(self):
+        self.motors = [
+            MotorDriver(addr) for addr in self.motor_addrs
+        ]
+        
+        for motor, side in zip(self.motors, self.motor_sides):
+            motor.setDirection(side)
+            
+    def forward(self, meters: float, speed: float):
+        raise NotImplementedError
+    
+    def backward(self, meters: float, speed: float):
+        raise NotImplementedError
+    
+    def left(self, meters: float, speed: float):
+        raise NotImplementedError 
+
+    def right(self, meters: float, speed: float):
+        raise NotImplementedError
+    
+    def turn_left(self, degrees: float, speed: float):
+        raise NotImplementedError
+    
+    def turn_right(self, degrees: float, speed: float):
+        raise NotImplementedError
+
+    def stop(self):
+        raise NotImplementedError
+
+class QuadMotorSide(Enum):
+    FWD_LEFT = 0
+    FWD_RIGHT = 1
+    BWD_LEFT = 2
+    BWD_RIGHT = 3
+    
+class QuadMotorDriver(BaseMultiMotorDriver):
+    def __init__(self, motor_addrs: list[int], motor_sides: list[bool], motor_alignments: list[QuadMotorSide]):
+        super().__init__(motor_addrs, motor_sides)
+
+        assert len(self.motor_addrs) == len(self.motor_sides) == len(self.motor_alignments) == 4
+        self.motor_alignments = motor_alignments
+        self.motorsd = {side: motor for motor, side in zip(self.motors, self.motor_alignments)}
+        
+    def forward(self, meters: float, speed: float):
+        self.motorsd[QuadMotorSide.FWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        
+    def backward(self, meters: float, speed: float):
+        self.forward(meters, -speed)
+        
+    def left(self, meters: float, speed: float):
+        self.motorsd[QuadMotorSide.FWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_RIGHT].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_LEFT].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        
+    def right(self, meters: float, speed: float):
+        self.left(meters, -speed)
+        
+    def stop(self):
+        self.motorsd[QuadMotorSide.FWD_LEFT].reset()
+        self.motorsd[QuadMotorSide.FWD_RIGHT].reset()
+        self.motorsd[QuadMotorSide.BWD_LEFT].reset()
+        self.motorsd[QuadMotorSide.BWD_RIGHT].reset()
+
+    def turn_left(self, degrees: float, speed: float):
+        self.motors[QuadMotorSide.FWD_LEFT].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        self.motors[QuadMotorSide.FWD_RIGHT].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        self.motors[QuadMotorSide.BWD_LEFT].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        self.motors[QuadMotorSide.BWD_RIGHT].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+    
+    def turn_right(self, degrees: float, speed: float):
+        self.turn_left(-degrees, speed)        
+
 if __name__ == "__main__":
     init(
         bus=1,
-        wh_radius=50   
+        wh_radius=35,
     )
 
-    m1 = MotorDriver(0x0a)
-    m2 = MotorDriver(0x0b)
-    m3 = MotorDriver(0x0c)
-    m4 = MotorDriver(0x0d)
+    d = QuadMotorDriver(
+        motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
+        motor_sides=[True, True, False, False],
+        motor_alignments=[QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT]
+    )
     
-    # m2 = MotorDriver(0x0d)
+    d.forward(1, 1)
+    time.sleep(3)
     
-    m1.reset()
-    m2.reset()
-    m3.reset()
-    m4.reset()
+    d.backward(1, 1)
+    time.sleep(3)
     
-    # print(m1.device_index)
-    # print(m2.device_index)
+    d.left(1, 1)
+    time.sleep(3)
     
-    # print(m1.getVoltage())
-    # print(m2.getVoltage())
+    d.right(1, 1)
+    time.sleep(3)
     
-    # m1.setFreqPWM(0)
+    d.turn_left(45, 45)
+    time.sleep(3)
     
-    # print(m1.setSpeed(-5.0, MOT_RPM, 3.0, MOT_SEC))
-    # print(m2.setSpeed(-5.0, MOT_M_S, 3.0, MOT_SEC))
-    print(m3.setSpeed(5.0, MOT_M_S, 3.0, MOT_SEC))
-    print(m4.setSpeed(5.0, MOT_M_S, 3.0, MOT_SEC))
+    d.turn_right(45, 45)
+    time.sleep(3)
     
-    # print(m2.setSpeed(1.0, MOT_M_S, 4.0, MOT_MET))
-    
-    # m.setFreqPWM(30)
-    # m.setStop(100, MOT_SEC)
+    d.stop()
