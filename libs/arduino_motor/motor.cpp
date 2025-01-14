@@ -114,6 +114,12 @@ extern "C"
 		}
 	}
 
+	type device struct {
+		uint8_t address;
+		uint8_t* buf;
+		uint16_t radius;
+	}
+
 	uint8_t busNum;
 	uint64_t timReset;
 	uint64_t lastWrite;
@@ -132,13 +138,9 @@ extern "C"
 	// Module
 	bool readBytes(uint8_t reg, uint8_t sum, i2c_device *dev)
 	{
-		if (lastWrite) {
-			if (time_ms() - lastWrite < 60) { // delay between writes
-				delay(40);
-			}
-		}
-		ssize_t result = 0;	 //	Определяем флаг       для хранения результата чтения.
-		uint8_t sumtry = 10; //	Определяем переменную для подсчёта количества оставшихся попыток чтения.
+		ssize_t result = 0;
+		uint8_t sumtry = 10;
+
 		do
 		{
 			result = i2c_ioctl_read(dev, reg, data, sum);
@@ -150,28 +152,16 @@ extern "C"
 		} while (result <= 0 && sumtry > 0); //	Повторяем чтение если оно завершилось неудачей, но не более sumtry попыток.
 
 		lastWrite = time_ms();
-		delay(30);		   //	Между пакетами необходимо выдерживать паузу.
+		delay(10);		   //	Между пакетами необходимо выдерживать паузу.
 		
 		return result > 0; //	Возвращаем результат чтения (true/false).
 	}
 
 	bool writeBytes(uint8_t reg, uint8_t sum, uint8_t num, i2c_device *dev)
-	{						 //	Параметры:				reg - номер первого регистра, sum - количество записываемых байт, num - номер первого элемента массива data.
-		ssize_t result = 0;	 //	Определяем флаг       для хранения результата записи.
-		uint8_t sumtry = 10; //	Определяем переменную для подсчёта количества оставшихся попыток записи.
-		do
-		{
-			result = i2c_ioctl_write(dev, reg, &data[num], sum);
-
-			sumtry--;
-			if (result <= 0)
-			{
-				delay(2);
-			} //	Уменьшаем количество попыток записи и устанавливаем задержку при неудаче.
-		} while (result <= 0 && sumtry > 0); //	Повторяем запись если она завершилась неудачей, но не более sumtry попыток.
-
-		delay(30);		   //	Ждём применения модулем записанных данных.
-		return result > 0; //	Возвращаем результат записи (true/false).
+	{
+		size_t result = i2c_ioctl_write(dev, reg, &data[num], sum);
+		delay(10);
+		return result == sum;
 	}
 
 	void setBus(uint8_t bus)
@@ -186,7 +176,7 @@ extern "C"
 
 	void init(void)
 	{
-		// open i2c bus (https://github.com/amaork/libi2c/blob/master/example/i2c_tools.c ref)
+		// open i2c bus (https://github.com/amaork/libi2c/blob/master/example/i2c_tools.c ref) //
 		int bus;
 		char bus_name[32];
 		memset(bus_name, 0, sizeof(bus_name));
