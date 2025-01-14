@@ -114,7 +114,7 @@ extern "C"
 		}
 	}
 
-	type device struct {
+	typedef struct device {
 		uint8_t address;
 		uint8_t* buf;
 		uint16_t radius;
@@ -176,6 +176,9 @@ extern "C"
 
 	void init(void)
 	{
+		memset(devices, 0, sizeof(devices));
+		memset(data, 0, sizeof(data));
+
 		// open i2c bus (https://github.com/amaork/libi2c/blob/master/example/i2c_tools.c ref) //
 		int bus;
 		char bus_name[32];
