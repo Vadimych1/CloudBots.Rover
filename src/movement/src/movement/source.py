@@ -216,12 +216,9 @@ class BaseMultiMotorDriver:
     :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
     :@param motor_sides: list of motor directions (True - default/False - reversed)
     """
-    def __init__(self, motor_addrs: list[int], motor_sides: list[bool]):
+    def __init__(self, motor_addrs: list, motor_sides: list):
         self.motor_addrs = motor_addrs
         self.motor_sides = motor_sides
-        self.motors = []
-        
-    def init(self):
         self.motors = [
             MotorDriver(addr) for addr in self.motor_addrs
         ]
@@ -255,44 +252,58 @@ class QuadMotorSide(Enum):
     FWD_RIGHT = 1
     BWD_LEFT = 2
     BWD_RIGHT = 3
-    
+        
 class QuadMotorDriver(BaseMultiMotorDriver):
-    def __init__(self, motor_addrs: list[int], motor_sides: list[bool], motor_alignments: list[QuadMotorSide]):
+    def __init__(self, motor_addrs: list, motor_sides: list, motor_alignments: list):
         super().__init__(motor_addrs, motor_sides)
+        self.motor_alignments = motor_alignments
 
         assert len(self.motor_addrs) == len(self.motor_sides) == len(self.motor_alignments) == 4
-        self.motor_alignments = motor_alignments
-        self.motorsd = {side: motor for motor, side in zip(self.motors, self.motor_alignments)}
+        self.motorsd = {}
+        for motor, side in zip(self.motors, self.motor_alignments):
+            self.motorsd[side.name] = motor
         
     def forward(self, meters: float, speed: float):
-        self.motorsd[QuadMotorSide.FWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.FWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
         
     def backward(self, meters: float, speed: float):
         self.forward(meters, -speed)
         
     def left(self, meters: float, speed: float):
-        self.motorsd[QuadMotorSide.FWD_LEFT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.FWD_RIGHT].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_LEFT].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_RIGHT].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
         
     def right(self, meters: float, speed: float):
         self.left(meters, -speed)
         
     def stop(self):
-        self.motorsd[QuadMotorSide.FWD_LEFT].reset()
-        self.motorsd[QuadMotorSide.FWD_RIGHT].reset()
-        self.motorsd[QuadMotorSide.BWD_LEFT].reset()
-        self.motorsd[QuadMotorSide.BWD_RIGHT].reset()
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].reset()
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].reset()
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].reset()
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].reset()
+        time.sleep(0.07)
 
     def turn_left(self, degrees: float, speed: float):
-        self.motors[QuadMotorSide.FWD_LEFT].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        self.motors[QuadMotorSide.FWD_RIGHT].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        self.motors[QuadMotorSide.BWD_LEFT].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        self.motors[QuadMotorSide.BWD_RIGHT].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
+        time.sleep(0.07)
     
     def turn_right(self, degrees: float, speed: float):
         self.turn_left(-degrees, speed)        
@@ -306,25 +317,41 @@ if __name__ == "__main__":
     d = QuadMotorDriver(
         motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
         motor_sides=[True, True, False, False],
-        motor_alignments=[QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT]
+        motor_alignments=[QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
     )
     
-    d.forward(1, 1)
-    time.sleep(3)
-    
-    d.backward(1, 1)
-    time.sleep(3)
-    
-    d.left(1, 1)
-    time.sleep(3)
-    
-    d.right(1, 1)
-    time.sleep(3)
-    
-    d.turn_left(45, 45)
-    time.sleep(3)
-    
-    d.turn_right(45, 45)
-    time.sleep(3)
-    
+    d.forward(10, 1)
+    time.sleep(10)
     d.stop()
+    time.sleep(0.4)
+    
+    # print("a")
+    # d.backward(4, 1)
+    # time.sleep(4)
+    # d.stop()
+    # time.sleep(0.5)
+    
+    # print("a")
+    # d.left(4, 1)
+    # time.sleep(4)
+    # d.stop()
+    # time.sleep(0.5)
+    
+    # print("a")
+    # d.right(4, 1)
+    # time.sleep(4)
+    # d.stop()
+    # time.sleep(0.5)
+    
+    # print("a")
+    # d.turn_left(45, 45)
+    # time.sleep(3)
+
+    # print("a")
+    # d.turn_right(45, 45)
+    
+    time.sleep(3)
+    
+    # d.stop()
+    
+    
