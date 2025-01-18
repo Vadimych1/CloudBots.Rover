@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/miniros/__init__.py
+src/miniros/__main__.py
+src/miniros/builtin_datatypes.py
+src/miniros/source.py
+src/miniros.egg-info/PKG-INFO
+src/miniros.egg-info/SOURCES.txt
+src/miniros.egg-info/dependency_links.txt
+src/miniros.egg-info/top_level.txt

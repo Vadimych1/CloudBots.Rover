@@ -1,0 +1,13 @@
+Metadata-Version: 2.2
+Name: lidar_module
+Version: 1.0.0
+Summary: MiniROS Package
+Author-email: Some Author <author@example.com>
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: None
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+CHANGE ME
