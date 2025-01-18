@@ -1,6 +1,6 @@
 
 [project]
-name = "movement"
+name = "i2c_data"
 version = "1.0.0"
 authors = [
     { name = "Some Author", email = "author@example.com" }

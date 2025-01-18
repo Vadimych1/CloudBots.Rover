@@ -1,16 +1,15 @@
 import os
 
-if "openni_lib" not in os.listdir():
+if "openni_lib" not in os.listdir("./libs"):
     print(
-        "openni_lib not found. Download openni from https://structure.io/openni/ and put it in this folder"
+        "libs/openni_lib not found. Download openni from https://structure.io/openni/ and put it in this folder"
     )
 
 import cv2
 from openni import openni2
 import numpy
 
-openni2.initialize("openni_lib")
-
+openni2.initialize("libs/openni_lib")
 
 class StereoCam:
     def __init__(self, cam_index: int = None, initVideo=True) -> None:
