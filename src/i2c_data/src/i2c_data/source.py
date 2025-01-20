@@ -340,3 +340,69 @@ class MPU6050:
         
     def temperature(self):
         return self.sensor.get_temp()
+
+# ! setError(20) - отколнение скорости > 20%
+
+# position = (0., 0.) # Определим начальное положение робота (x, z)
+# speed = (0., 0.)    # Определим начальную скорость робота (x, z)
+# rotation = 0.                            # Определим начальное вращение робота (y)
+# rotation_speed = 0.                      # Определим начальную скорость вращения робота (y)
+
+# def process_position(acc_data: tuple[float, float], gyro_data: float) -> tuple[float, float]:
+#     global position, rotation
+    
+#     acc_x, acc_z = acc_data
+    
+#     rotation_speed += gyro_data / 180 * math.pi # Переводим в радианы и интегрируем скорость вращения
+#     rotation += rotation_speed                  # Переводим в радианы и интегрируем вращение
+    
+#     speed[0] += acc_x # Интегрируем скорость (x)
+#     speed[1] += acc_z # Интегрируем скорость (z)
+    
+#     pos_x = position[0] + math.cos(rotation) * speed[0] - math.sin(rotation) * speed[1] # Интегрируем положение (x)
+#     pos_z = position[1] + math.sin(rotation) * speed[0] + math.cos(rotation) * speed[1] # Интегрируем положение (z)
+    
+#     position = (pos_x, pos_z) # Сохраняем положение для следующих вычислений
+    
+#     return position
+
+# import numpy as np
+# import quaternion as quat
+
+# def a(x):
+#     return x
+
+# def g(x):
+#     return np.array([0, 0, x / 2])
+
+# rotation_speed = 0
+# rotation = 0
+
+# speed = np.array([0, 0, 0])
+# position = np.array([0, 0, 0])
+
+# e = np.array([0, 1, 0])
+
+# def next_r(x):
+#     global rotation_speed, rotation
+#     rotation_speed += x
+#     rotation += rotation_speed
+#     return rotation
+
+# def next_p(x):
+#     global rotation_speed, rotation
+ 
+#     r = next_r(x)
+#     A = g(x)
+#     axis_angle = (r * 0.5) * e / np.linalg.norm(e)
+    
+#     vec = quat.quaternion(0, *A)
+#     qlog = quat.quaternion(0, *axis_angle)   
+#     q = np.exp(qlog)
+#     A2 = q * vec * np.conjugate(q)
+#     A2 = A2.imag
+    
+#     speed += A2
+#     position += speed
+    
+#     return position
