@@ -54,8 +54,13 @@ def __init_mot():
     _mot.getMagnet.argtypes = [c_uint8]
     _mot.getMagnet.restype = c_uint8
 
-    # TODO: fix setReducer in .cpp code
-    # TODO: fix getReducer in .cpp code
+    # Reducer, Device index
+    _mot.setReducer.argtypes = [c_float, c_uint8]
+    _mot.setReducer.restype = c_bool
+    
+    # Device index
+    _mot.getReducer.argtypes = [c_uint8]
+    _mot.getReducer.restype = c_float
 
     # Deviation, Device index
     _mot.setError.argtypes = [c_uint8, c_uint8]
@@ -149,12 +154,6 @@ class MotorDriver:
     def getMagnet(self) -> int:
         return _mot.getMagnet(self.device_index)
     
-    def setReducer(self, gear: float) -> bool:
-        raise NotImplementedError
-    
-    def getReducer(self) -> bool:
-        raise NotImplementedError
-    
     def setError(self, deviation: int) -> bool:
         return _mot.setError(deviation, self.device_index)
     
@@ -208,6 +207,15 @@ class MotorDriver:
     
     def saveManufacturer(self):
         raise NotImplementedError
+
+    def stop(self):
+        self.setStop(0, 0xFF)
+
+    def setReducer(self, reducer: float) -> bool:
+        return _mot.setReducer(reducer, self.device_index)
+        
+    def getReducer(self):
+        return _mot.getReducer(self.device_index)
 
 class BaseMultiMotorDriver:
     """
@@ -263,13 +271,9 @@ class QuadMotorDriver(BaseMultiMotorDriver):
             self.motorsd[side.name] = motor
         
     def forward(self, meters: float, speed: float):
-        time.sleep(0.07)
         self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        time.sleep(0.07)
         self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        time.sleep(0.07)
         self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        time.sleep(0.07)
         self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
         
     def backward(self, meters: float, speed: float):
@@ -285,58 +289,157 @@ class QuadMotorDriver(BaseMultiMotorDriver):
         self.left(meters, -speed)
         
     def stop(self):
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].reset()
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].reset()
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].reset()
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].reset()
-        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].stop()
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].stop()
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].stop()
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].stop()
 
     def turn_left(self, degrees: float, speed: float):
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        time.sleep(0.07)
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed / 180 * math.pi, MOT_M_S, degrees / 180 * math.pi, MOT_MET)
-        time.sleep(0.07)
+        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(-speed, MOT_M_S, degrees, MOT_MET)
+        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, degrees, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed, MOT_M_S, degrees, MOT_MET)
+        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, degrees, MOT_MET)
     
     def turn_right(self, degrees: float, speed: float):
         self.turn_left(-degrees, speed)        
+        
+        
+    def errors(self):
+        for motor in self.motors:
+            e = motor.getError()
+            if e > 0:
+                if e == MOT_ERR_DRV:
+                    print(hex(motor.addr), "ERR_DRV")
+                else:
+                    print(hex(motor.addr), "ERR_SPD")
+            
+            time.sleep(0.1)
 
 if __name__ == "__main__":
     init_motors(
         bus=1,
         wh_radius=35,
     )
-
+    
     d = QuadMotorDriver(
+        # 
         motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
-        motor_sides=[True, True, False, False],
-        motor_alignments=[QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
+        motor_sides=[False, False, True, True],
+        motor_alignments=[QuadMotorSide.FWD_LEFT, QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
     )
     
-    d.forward(10, 1)
-    time.sleep(10)
-    d.stop()
-    time.sleep(0.4)
-
-    time.sleep(3)
-
-# ! MPU6050
-class MPU6050:
-    def __init__(self, addr: int = None):
-        self.addr = addr
-        self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
-
-    def accelerometer(self):
-        return self.sensor.get_accel_data()
+    for mot in d.motors:
+        mot.stop()
         
-    def gyroscope(self):
-        return self.sensor.get_gyro_data()
+
+        mot.setMagnet(2)
+        mot.setError(90)
         
-    def temperature(self):
-        return self.sensor.get_temp()
+        # mot.setInvGear(False, False)
+        
+        mot.setStopNeutral(True)
+        mot.setPullI2C(True)
+        
+        mot.setReducer(200.0)
+        mot.getReducer()
+        
+        time.sleep(0.1)
+    
+    time.sleep(0.5)
+
+    # ! motor test
+    # d.motors[2].setSpeed(2, MOT_M_S, 2, MOT_MET)
+    # quit(0)
+
+    while True:
+        s = input()
+        
+        if s == "q":
+            break
+        elif s == "w":
+            d.forward(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        elif s == "s":
+            d.backward(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        elif s == "a":
+            d.left(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        elif s == "d":
+            d.right(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        elif s == "e":
+            d.turn_left(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        elif s == "r":
+            d.turn_right(6, 1)
+            
+            time.sleep(0.1)
+            
+            for i in range(8):
+                d.errors()
+                
+            d.stop()
+            time.sleep(0.1)
+        
+        print("Done")
+
+# # ! MPU6050
+# class MPU6050:
+#     def __init__(self, addr: int = None):
+#         self.addr = addr
+#         self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
+
+#     def accelerometer(self):
+#         return self.sensor.get_accel_data()
+        
+#     def gyroscope(self):
+#         return self.sensor.get_gyro_data()
+        
+#     def temperature(self):
+#         return self.sensor.get_temp()
+
+# m = MPU6050(0x68)
+# while True:
+#     print(m.gyroscope(), m.accelerometer())
+#     time.sleep(0.1)

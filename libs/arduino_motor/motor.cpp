@@ -118,7 +118,7 @@ extern "C"
 		uint8_t address;
 		uint8_t* buf;
 		uint16_t radius;
-	}
+	};
 
 	uint8_t busNum;
 	uint64_t timReset;
@@ -138,29 +138,12 @@ extern "C"
 	// Module
 	bool readBytes(uint8_t reg, uint8_t sum, i2c_device *dev)
 	{
-		ssize_t result = 0;
-		uint8_t sumtry = 10;
-
-		do
-		{
-			result = i2c_ioctl_read(dev, reg, data, sum);
-			sumtry--;
-			if (result <= 0)
-			{
-				delay(2);
-			} //	Уменьшаем количество попыток чтения и устанавливаем задержку при неудаче.
-		} while (result <= 0 && sumtry > 0); //	Повторяем чтение если оно завершилось неудачей, но не более sumtry попыток.
-
-		lastWrite = time_ms();
-		delay(10);		   //	Между пакетами необходимо выдерживать паузу.
-		
-		return result > 0; //	Возвращаем результат чтения (true/false).
+		return i2c_ioctl_read(dev, reg, data, sum) > 0; //	Возвращаем результат чтения (true/false).
 	}
 
 	bool writeBytes(uint8_t reg, uint8_t sum, uint8_t num, i2c_device *dev)
 	{
 		size_t result = i2c_ioctl_write(dev, reg, &data[num], sum);
-		delay(10);
 		return result == sum;
 	}
 
@@ -315,7 +298,7 @@ extern "C"
 		{
 			return false;
 		} //	Записываем 1 байт в регистр «REG_BITS_0» из массива «data».
-		delay(50);	 //	Даём время для сохранения данных в энергонезависимую память модуля.
+		delay(30);	 //	Даём время для сохранения данных в энергонезависимую память модуля.
 		return true; //	Возвращаем флаг успеха.
 	} //
 	  //
@@ -392,12 +375,7 @@ extern "C"
 		data[1] = ((uint32_t)gear >> 8) & 0x000000FF;  //	Байт для записи в регистр «REG_MOT_REDUCER_C».
 		data[2] = ((uint32_t)gear >> 16) & 0x000000FF; //	Байт для записи в регистр «REG_MOT_REDUCER_H».
 													   //	Отправляем подготовленные данные в модуль:																		//
-		if (writeBytes(REG_MOT_REDUCER_L, 3, 0, &ddev) == false)
-		{
-			return false;
-		} //	Записываем 3 байта из массива «data» в модуль, начиная с регистра «REG_MOT_REDUCER_L».
-		  //	Возвращаем результат:																							//
-		return true; //
+		return writeBytes(REG_MOT_REDUCER_L, 3, 0, &ddev);
 	} //
 	  //
 	//		Получение передаточного отношения редуктора:																			//	Возвращаемое значение:	передаточное отношение редуктора от 0.01 до 167'772.15.
@@ -406,10 +384,8 @@ extern "C"
 		i2c_device ddev = getDev(device);
 
 		//	Читаем и возвращаем передаточное отношение редуктора:															//
-		if (readBytes(REG_MOT_REDUCER_L, 3, &ddev) == false)
-		{
-			return 0;
-		} //	Читаем 3 байта начиная с регистра «REG_MOT_REDUCER_L» в массив «data».
+		readBytes(REG_MOT_REDUCER_L, 3, &ddev);
+	
 		return (float)((int32_t)data[2] << 16 | (int32_t)data[1] << 8 | (int32_t)data[0]) / 100; //	Возвращаем прочитанное значение.
 	} //
 	  //
@@ -754,10 +730,10 @@ extern "C"
 		if (writeBytes(REG_MOT_STOP, 1, 0, &ddev) == false)
 		{
 			return false;
-		} //	Записываем 1 байт из массива «data» в регистр «REG_MOT_STOP».
-		delay(10);	 //	Ждём 10 мс.
-					 //	Возвращаем результат:																							//
-		return true; //
+		}
+		delay(2);
+
+		return true;
 	}
 	//		Получение флага установки нейтрального положения при остановке:															//	Возвращаемое значение:	флаг установки нейтрального положения при остановке true/false.
 	bool getStopNeutral(uint8_t device)
@@ -956,7 +932,7 @@ extern "C"
 		{
 			return false;
 		} //	Записываем 5 байт в регистр «REG_MANUFACTURER».
-		delay(50);	 //	Даём время для сохранения данных в энергонезависимую память модуля.
+		delay(30);	 //	Даём время для сохранения данных в энергонезависимую память модуля.
 					 //	Возвращаем результат:																							//
 		return true; //
 	}
