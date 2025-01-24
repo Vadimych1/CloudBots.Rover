@@ -106,14 +106,21 @@ def __init_mot():
     _mot.getVoltage.argtypes = [c_uint8]
     _mot.getVoltage.restype = c_float
 
-    # TODO: setInvGear
-    # TODO: getInvGear
-    # ! TODO: getSum
-    # TODO: setVoltage
-    # TODO: getVoltage
-    # TODO: setNominalRPM
-    # TODO: getNominalRPM
-    # TODO: saveManufacturer
+    # Voltage, Device index
+    _mot.setVoltage.argtypes = [c_float, c_uint8]
+    _mot.setVoltage.restype = c_bool
+    
+    # invRDR, invPIN, Device index
+    _mot.setInvGear.argtypes = [c_bool, c_bool, c_uint8]
+    _mot.setInvGear.restype = c_bool
+    
+    # Device index
+    _mot.getInvGear.argtypes = [c_uint8]
+    _mot.getInvGear.restype = c_bool
+
+    # Type, Device index
+    _mot.getSum.argtypes = [c_uint8, c_uint8]
+    _mot.getSum.restype = c_float
 
 
 def init_motors(bus: int, wh_radius: int):
@@ -184,29 +191,20 @@ class MotorDriver:
     def getDirection(self) -> bool:
         return _mot.getDirection(self.device_index)
     
-    def setInvGear(self, value1: bool, value2: bool):
-        raise NotImplementedError
+    def setInvGear(self, value1: bool, value2: bool) -> bool:
+        return _mot.setInvGear(value1, value2, self.device_index)
     
-    def getInvGear(self) -> bool: # ???
-        raise NotImplementedError
+    def getInvGear(self) -> bool:
+        return _mot.getInvGear(self.device_index)
     
-    def getSum(self, type: int):
-        raise NotImplementedError
+    def getSum(self, type: int) -> float:
+        return _mot.getSum(type, self.device_index)
     
-    def setVoltage(self, voltage: float):
-        raise NotImplementedError
+    def setVoltage(self, voltage: float) -> bool:
+        return _mot.setVoltage(voltage, self.device_index)
 
-    def getVoltage(self):
+    def getVoltage(self) -> float:
         return _mot.getVoltage(self.device_index)
-    
-    def setNominalRPM(self, value: int):
-        raise NotImplementedError
-
-    def getNominalRPM(self):
-        raise NotImplementedError
-    
-    def saveManufacturer(self):
-        raise NotImplementedError
 
     def stop(self):
         self.setStop(0, 0xFF)
