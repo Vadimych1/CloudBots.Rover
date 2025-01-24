@@ -341,8 +341,6 @@ class MPU6050:
     def temperature(self):
         return self.sensor.get_temp()
 
-# ! setError(20) - отколнение скорости > 20%
-
 # position = (0., 0.) # Определим начальное положение робота (x, z)
 # speed = (0., 0.)    # Определим начальную скорость робота (x, z)
 # rotation = 0.                            # Определим начальное вращение робота (y)
