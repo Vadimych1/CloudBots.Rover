@@ -1,7 +1,8 @@
 import time
 from enum import Enum
 from ctypes import *
-import math
+import numpy as np
+import quaternion as quat
 import mpu6050 as mpu
 
 
@@ -313,6 +314,50 @@ class QuadMotorDriver(BaseMultiMotorDriver):
             
             time.sleep(0.1)
 
+# ! MPU6050
+class MPU6050:
+    def __init__(self, addr: int = None):
+        self.addr = addr
+        self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
+        
+        self.rotation_speed = 0
+        self.rotation = 0
+
+        self.speed = np.array([0, 0, 0])
+        self.position = np.array([0, 0, 0])
+        
+        self.e = np.array([0, 1, 0])
+        
+
+    def accelerometer(self):
+        return self.sensor.get_accel_data()
+        
+    def gyroscope(self):
+        return self.sensor.get_gyro_data()
+        
+    def temperature(self):
+        return self.sensor.get_temp()
+        
+    def integrate_tick(self) -> np.ndarray:
+        self.rotation_speed += self.gyroscope()
+        self.rotation += self.rotation_speed
+    
+        r = self.rotation
+        A = self.accelerometer()
+        axis_angle = (r * 0.5) * self.e / np.linalg.norm(self.e)
+        
+        vec = quat.quaternion(0, *A)
+        qlog = quat.quaternion(0, *axis_angle)   
+        q = np.exp(qlog)
+        A2 = q * vec * np.conjugate(q)
+        A2 = A2.imag
+        
+        self.speed += A2
+        self.position += self.speed
+        
+        return self.position
+    
+
 if __name__ == "__main__":
     init_motors(
         bus=1,
@@ -341,25 +386,22 @@ if __name__ == "__main__":
         mot.setReducer(200.0)
         mot.getReducer()
         
-        time.sleep(0.1)
+        time.sleep(0.06)
     
     time.sleep(0.5)
-
-    # ! motor test
-    # d.motors[2].setSpeed(2, MOT_M_S, 2, MOT_MET)
-    # quit(0)
 
     while True:
         s = input()
         
         if s == "q":
             break
+        
         elif s == "w":
             d.forward(6, 1)
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
@@ -370,7 +412,7 @@ if __name__ == "__main__":
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
@@ -381,7 +423,7 @@ if __name__ == "__main__":
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
@@ -392,7 +434,7 @@ if __name__ == "__main__":
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
@@ -403,7 +445,7 @@ if __name__ == "__main__":
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
@@ -414,89 +456,10 @@ if __name__ == "__main__":
             
             time.sleep(0.1)
             
-            for i in range(8):
+            for i in range(5):
                 d.errors()
                 
             d.stop()
             time.sleep(0.1)
         
         print("Done")
-
-# # ! MPU6050
-# class MPU6050:
-#     def __init__(self, addr: int = None):
-#         self.addr = addr
-#         self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
-
-#     def accelerometer(self):
-#         return self.sensor.get_accel_data()
-        
-#     def gyroscope(self):
-#         return self.sensor.get_gyro_data()
-        
-    def temperature(self):
-        return self.sensor.get_temp()
-
-# position = (0., 0.) # Определим начальное положение робота (x, z)
-# speed = (0., 0.)    # Определим начальную скорость робота (x, z)
-# rotation = 0.                            # Определим начальное вращение робота (y)
-# rotation_speed = 0.                      # Определим начальную скорость вращения робота (y)
-
-# def process_position(acc_data: tuple[float, float], gyro_data: float) -> tuple[float, float]:
-#     global position, rotation
-    
-#     acc_x, acc_z = acc_data
-    
-#     rotation_speed += gyro_data / 180 * math.pi # Переводим в радианы и интегрируем скорость вращения
-#     rotation += rotation_speed                  # Переводим в радианы и интегрируем вращение
-    
-#     speed[0] += acc_x # Интегрируем скорость (x)
-#     speed[1] += acc_z # Интегрируем скорость (z)
-    
-#     pos_x = position[0] + math.cos(rotation) * speed[0] - math.sin(rotation) * speed[1] # Интегрируем положение (x)
-#     pos_z = position[1] + math.sin(rotation) * speed[0] + math.cos(rotation) * speed[1] # Интегрируем положение (z)
-    
-#     position = (pos_x, pos_z) # Сохраняем положение для следующих вычислений
-    
-#     return position
-
-# import numpy as np
-# import quaternion as quat
-
-# def a(x):
-#     return x
-
-# def g(x):
-#     return np.array([0, 0, x / 2])
-
-# rotation_speed = 0
-# rotation = 0
-
-# speed = np.array([0, 0, 0])
-# position = np.array([0, 0, 0])
-
-# e = np.array([0, 1, 0])
-
-# def next_r(x):
-#     global rotation_speed, rotation
-#     rotation_speed += x
-#     rotation += rotation_speed
-#     return rotation
-
-# def next_p(x):
-#     global rotation_speed, rotation
- 
-#     r = next_r(x)
-#     A = g(x)
-#     axis_angle = (r * 0.5) * e / np.linalg.norm(e)
-    
-#     vec = quat.quaternion(0, *A)
-#     qlog = quat.quaternion(0, *axis_angle)   
-#     q = np.exp(qlog)
-#     A2 = q * vec * np.conjugate(q)
-#     A2 = A2.imag
-    
-#     speed += A2
-#     position += speed
-    
-#     return position
