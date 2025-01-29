@@ -270,6 +270,7 @@ class QuadMotorDriver(BaseMultiMotorDriver):
             self.motorsd[side.name] = motor
         
     def forward(self, meters: float, speed: float):
+        
         self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
         self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
         self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
@@ -361,11 +362,10 @@ class MPU6050:
 if __name__ == "__main__":
     init_motors(
         bus=1,
-        wh_radius=35,
+        wh_radius=28,
     )
     
     d = QuadMotorDriver(
-        # 
         motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
         motor_sides=[False, False, True, True],
         motor_alignments=[QuadMotorSide.FWD_LEFT, QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
@@ -378,7 +378,7 @@ if __name__ == "__main__":
         mot.setMagnet(2)
         mot.setError(90)
         
-        # mot.setInvGear(False, False)
+        mot.setInvGear(False, False)
         
         mot.setStopNeutral(True)
         mot.setPullI2C(True)

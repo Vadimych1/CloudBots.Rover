@@ -4,9 +4,10 @@ import math
 from miniros.source import Node
 import logging
 # from typing import Callable
-# import numpy as np
+import numpy as np
 import sys
 from movement.datatypes import MovementPacket
+import cv2 as cv
 
 logging.basicConfig()
 
@@ -97,17 +98,28 @@ c = ".,aq:;!#Q$%@"
 cl = len(c)
 # print(max_data_q)
 
-saveInFile = False
-f = open("out.txt", "w") if saveInFile else sys.stdout
+# saveInFile = False
+# f = open("out.txt", "w") if saveInFile else sys.stdout
+
+writer = cv.VideoWriter("out.mp4", cv.VideoWriter_fourcc(*"mp4v"), 10, (300, 300))
+
+try:
+    while True:
+        
+        q = l.scan()
+        frame = np.zeros((300, 300, 3), dtype=np.uint8)
+
+        for y, row in enumerate(q):
+            for x, quality in enumerate(row):
+                frame[y, x, 0] = int(quality / cl * 255)
+                frame[y, x, 1] = int(quality / cl * 255)
+                frame[y, x, 2] = int(quality / cl * 255)
+
+        writer.write(frame)
+        time.sleep(0.1)
+except:
+    writer.release()
+
 
 # while True:
-#     q = l.scan()
-#     for row in q:
-#         for x in row:
-#             print(c[int(x / 16 * cl)], end=" ", file=f)
-#         print(file=f)
-
-#     time.sleep(0.4)
-
-while True:
-    time.sleep(10)
+    # time.sleep(10)
