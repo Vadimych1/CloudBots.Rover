@@ -1,0 +1,70 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot control panel</title>
+</head>
+<body>
+    <canvas id="canvas" width="700" height="500" style="background-color: black;"></canvas>
+    
+    <p class="info">Info...</p>
+    <p class="status">Disconnected</p>
+
+    <input type="text" id="addr">
+    <input type="button" id="connect">
+</body>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const info = document.querySelector('.info');
+    const status = document.querySelector('.status');
+
+    const addr = document.getElementById('addr');
+    const connect = document.getElementById('connect');
+
+    connect.addEventListener("click", () => {
+        if (addr.value.length == 0) return;
+        ws = new WebSocket(addr.value);
+
+        ws.onopen = () => {
+            status.innerHTML = "Connected";
+        };
+
+        ws.onclose = () => {
+            status.innerHTML = "Disconnected";
+        };
+
+        ws.onerror = () => {
+            status.innerHTML = "Error";
+        }
+
+        ws.onmessage = (e) => {
+            let j = JSON.parse(e.data);
+
+            if (j.type == "data") {
+                info.innerHTML = `x: ${j.data.x} y: ${j.data.y} phi: ${j.data.phi}`;
+            } else if (j.type == "map_render") {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                let img = new Image();
+                img.src = j.data;
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                }
+            }
+        }
+
+        setInterval(() => {
+            ws.send('{"type": "data"}');
+        }, 300);
+
+        setInterval(() => {
+            ws.send('{"type": "map"}');
+        }, 1500);
+    });
+
+    var ws;
+</script>
+
+</html>

@@ -1,1 +1,0 @@
-# put code here to run it like MiniROS package

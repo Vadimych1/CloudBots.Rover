@@ -4,6 +4,7 @@ from ctypes import *
 import numpy as np
 import quaternion as quat
 import mpu6050 as mpu
+import logging
 
 
 _mot = cdll.LoadLibrary("libs/arduino_motor/motor.so")
@@ -222,98 +223,59 @@ class BaseMultiMotorDriver:
     :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
     :@param motor_sides: list of motor directions (True - default/False - reversed)
     """
-    def __init__(self, motor_addrs: list, motor_sides: list):
+    def __init__(self, motor_addrs: list):
+        self.logger = logging.getLogger("MotorDriver")
+        
+        self.prevstate = 1
+        
         self.motor_addrs = motor_addrs
-        self.motor_sides = motor_sides
         self.motors = [
             MotorDriver(addr) for addr in self.motor_addrs
         ]
         
-        for motor, side in zip(self.motors, self.motor_sides):
-            motor.setDirection(side)
+        for mot in self.motors:
+            mot.setDirection(True)
+            mot.setMagnet(2)
+            mot.setError(90)
+            mot.setInvGear(False, False)
+            mot.setStopNeutral(True)
+            mot.setPullI2C(True)
+            mot.setReducer(200.0)
+            time.sleep(0.06)
             
-    def forward(self, meters: float, speed: float):
-        raise NotImplementedError
+        logging.log("INFO", "Motors initialized")
+            
+    def move(self, speeds: float, time: float):
+        for i, motor in enumerate(self.motors[::self.prevstatce]):
+            motor.setSpeed(int(speeds[i]*9.549296585513718/np.pi), MOT_RPM, time, MOT_SEC) # convert rad/s to rpm and run motor
+            time.sleep(0.01)
+            
+        self.prevstate *= -1
     
-    def backward(self, meters: float, speed: float):
-        raise NotImplementedError
-    
-    def left(self, meters: float, speed: float):
-        raise NotImplementedError 
-
-    def right(self, meters: float, speed: float):
-        raise NotImplementedError
-    
-    def turn_left(self, degrees: float, speed: float):
-        raise NotImplementedError
-    
-    def turn_right(self, degrees: float, speed: float):
-        raise NotImplementedError
-
     def stop(self):
-        raise NotImplementedError
-
-class QuadMotorSide(Enum):
-    FWD_LEFT = 0
-    FWD_RIGHT = 1
-    BWD_LEFT = 2
-    BWD_RIGHT = 3
-        
-class QuadMotorDriver(BaseMultiMotorDriver):
-    def __init__(self, motor_addrs: list, motor_sides: list, motor_alignments: list):
-        super().__init__(motor_addrs, motor_sides)
-        self.motor_alignments = motor_alignments
-
-        assert len(self.motor_addrs) == len(self.motor_sides) == len(self.motor_alignments) == 4
-        self.motorsd = {}
-        for motor, side in zip(self.motors, self.motor_alignments):
-            self.motorsd[side.name] = motor
-        
-    def forward(self, meters: float, speed: float):
-        
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        
-    def backward(self, meters: float, speed: float):
-        self.forward(meters, -speed)
-        
-    def left(self, meters: float, speed: float):
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed, MOT_M_S, meters, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, meters, MOT_MET)
-        
-    def right(self, meters: float, speed: float):
-        self.left(meters, -speed)
-        
-    def stop(self):
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].stop()
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].stop()
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].stop()
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].stop()
-
-    def turn_left(self, degrees: float, speed: float):
-        self.motorsd[QuadMotorSide.FWD_LEFT.name].setSpeed(-speed, MOT_M_S, degrees, MOT_MET)
-        self.motorsd[QuadMotorSide.FWD_RIGHT.name].setSpeed(speed, MOT_M_S, degrees, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_LEFT.name].setSpeed(-speed, MOT_M_S, degrees, MOT_MET)
-        self.motorsd[QuadMotorSide.BWD_RIGHT.name].setSpeed(speed, MOT_M_S, degrees, MOT_MET)
+        for motor in self.motors:
+            motor.stop()
+            time.sleep(0.015)
     
-    def turn_right(self, degrees: float, speed: float):
-        self.turn_left(-degrees, speed)        
-        
-        
     def errors(self):
+        result = True
         for motor in self.motors:
             e = motor.getError()
             if e > 0:
                 if e == MOT_ERR_DRV:
-                    print(hex(motor.addr), "ERR_DRV")
+                    result = False
+                    
+                    self.logger.error(f"{hex(motor.addr)} ERR_DRV")
+                    time.sleep(0.01) # delay to not interrupt anything
+                    
+                    self.stop()
+                    break
                 else:
-                    print(hex(motor.addr), "ERR_SPD")
+                    self.logger.error(f"{hex(motor.addr)} ERR_SPD")
             
-            time.sleep(0.1)
+            time.sleep(0.05)
+        
+        return result
 
 # ! MPU6050
 class MPU6050:
@@ -328,7 +290,6 @@ class MPU6050:
         self.position = np.array([0, 0, 0])
         
         self.e = np.array([0, 1, 0])
-        
 
     def accelerometer(self):
         return self.sensor.get_accel_data()
@@ -339,9 +300,9 @@ class MPU6050:
     def temperature(self):
         return self.sensor.get_temp()
         
-    def integrate_tick(self) -> np.ndarray:
-        self.rotation_speed += self.gyroscope()
-        self.rotation += self.rotation_speed
+    def integrate_tick(self, delta_time = 1) -> np.ndarray:
+        self.rotation_speed += self.gyroscope() * delta_time
+        self.rotation += self.rotation_speed * delta_time
     
         r = self.rotation
         A = self.accelerometer()
@@ -353,113 +314,102 @@ class MPU6050:
         A2 = q * vec * np.conjugate(q)
         A2 = A2.imag
         
-        self.speed += A2
-        self.position += self.speed
+        self.speed += A2 * delta_time
+        self.position += self.speed * delta_time
         
         return self.position
     
 
-if __name__ == "__main__":
-    init_motors(
-        bus=1,
-        wh_radius=28,
-    )
+# if __name__ == "__main__":
+#     init_motors(
+#         bus=1,
+#         wh_radius=28,
+#     )
     
-    d = QuadMotorDriver(
-        motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
-        motor_sides=[False, False, True, True],
-        motor_alignments=[QuadMotorSide.FWD_LEFT, QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
-    )
+#     d = QuadMotorDriver(
+#         motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
+#         motor_sides=[False, False, True, True],
+#         motor_alignments=[QuadMotorSide.FWD_LEFT, QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
+#     )
     
-    for mot in d.motors:
-        mot.stop()
+#     for mot in d.motors:
+#         mot.stop()
         
 
-        mot.setMagnet(2)
-        mot.setError(90)
         
-        mot.setInvGear(False, False)
-        
-        mot.setStopNeutral(True)
-        mot.setPullI2C(True)
-        
-        mot.setReducer(200.0)
-        mot.getReducer()
-        
-        time.sleep(0.06)
     
-    time.sleep(0.5)
+#     time.sleep(0.5)
 
-    while True:
-        s = input()
+#     while True:
+#         s = input()
         
-        if s == "q":
-            break
+#         if s == "q":
+#             break
         
-        elif s == "w":
-            d.forward(6, 1)
+#         elif s == "w":
+#             d.forward(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        elif s == "s":
-            d.backward(6, 1)
+#         elif s == "s":
+#             d.backward(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        elif s == "a":
-            d.left(6, 1)
+#         elif s == "a":
+#             d.left(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        elif s == "d":
-            d.right(6, 1)
+#         elif s == "d":
+#             d.right(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        elif s == "e":
-            d.turn_left(6, 1)
+#         elif s == "e":
+#             d.turn_left(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        elif s == "r":
-            d.turn_right(6, 1)
+#         elif s == "r":
+#             d.turn_right(6, 1)
             
-            time.sleep(0.1)
+#             time.sleep(0.1)
             
-            for i in range(5):
-                d.errors()
+#             for i in range(5):
+#                 d.errors()
                 
-            d.stop()
-            time.sleep(0.1)
+#             d.stop()
+#             time.sleep(0.1)
         
-        print("Done")
+#         print("Done")
