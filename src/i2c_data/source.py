@@ -5,9 +5,16 @@ import numpy as np
 import quaternion as quat
 import mpu6050 as mpu
 import logging
+import platform
 
+_, _, _, _, arch, _ = platform.uname()
+print("Using arch for I2C:", arch, "\n")
 
-_mot = cdll.LoadLibrary("libs/arduino_motor/motor.so")
+if arch == "aarch64" or arch == "aarch32":
+    _mot = cdll.LoadLibrary("libs/arduino_motor/motor_arm.so")
+else:
+    _mot = cdll.LoadLibrary("libs/arduino_motor/motor.so")
+
 MOT_ERR_SPD = 1 # getError();
 MOT_ERR_DRV = 2 #	getError();
 MOT_MET = 3 #	setStop(расстояние, MOT_MET); getStop(MOT_MET); setSpeed(скорость, MOT_RPM/MOT_PWM, расстояние, MOT_MET); getSum(MOT_MET);

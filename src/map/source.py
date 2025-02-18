@@ -122,17 +122,39 @@ class Map:
             self.chunks[c] = Chunk.load(*c, self.path)
             
             
-    def render(self):
-        img = Image.new('RGB', (600, 500), color='white')
-        draw = ImageDraw.Draw(img)
-        for (x, y), chunk in self.chunks.items():
-            data = chunk.data
-            w, h = data.shape
-            if w > 0 and h > 0:
-                scaled = data.repeat(600//w, axis=0).repeat(500//h, axis=1)[:500, :600]
-                draw.bitmap((0, 0), scaled, fill='black')
+    def render(self, rx, ry):        
+        max_chunk_x = max(map(lambda x: x[0], self.chunks.keys()))
+        max_chunk_y = max(map(lambda x: x[1], self.chunks.keys()))
+        
+        min_chunk_x = min(map(lambda x: x[0], self.chunks.keys()))
+        min_chunk_y = min(map(lambda x: x[1], self.chunks.keys()))
+        
+        w, h = max_chunk_x - min_chunk_x, max_chunk_y - min_chunk_y
+                
+        per_chunk_x = 300
+        per_chunk_y = 300
+        
+        img = Image.new('RGB', (int(per_chunk_x * w), int(per_chunk_y * h)), color='black')
+        
+        
+        for (x, y), chunk in self.chunks.copy().items():
+            data = Image.fromarray(chunk.data)
+            data = data.resize((per_chunk_x, per_chunk_y))
+            img.paste(data, (
+                per_chunk_x * (x - min_chunk_x), 
+                per_chunk_y * (y - min_chunk_y), 
+                per_chunk_x * (x - min_chunk_x + 1), 
+                per_chunk_y * (y - min_chunk_y + 1)
+            ))
+
+        draw = ImageDraw.ImageDraw(img)
+        draw.circle(((rx / 1000 - min_chunk_x) * per_chunk_x, (ry / 1000 - min_chunk_y) * per_chunk_y), 20, "red", "green")
+
         output = BytesIO()
+        
         img.save(output, format="PNG")
+        img.save("./lastmap.png", format="PNG")
+        
         return "data:image/png;base64," + base64.b64encode(output.getvalue()).decode('ascii')
     
     def __del__(self):
@@ -157,5 +179,5 @@ class Chunk:
             return Chunk(d_x, d_y)
     
 
-m = Map()
-print(m.create_path(0, 0, 10, 10))
+# m = Map()
+# print(m.create_path(0, 0, 10, 10))

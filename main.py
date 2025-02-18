@@ -10,18 +10,20 @@ import json
 
 
 from src.lidar_module.source import Lidar
-from src.i2c_data.source import BaseMultiMotorDriver, MPU6050
+from src.i2c_data.source import BaseMultiMotorDriver, MPU6050, init_motors
 from src.map.source import Map
 from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
 
 
+PROD = False
+
+
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%H:%M:%S",
+    level=logging.DEBUG,
 )
-
-
 
 
 class Robot:
@@ -46,8 +48,11 @@ class Robot:
         self.logger = logging.getLogger("Main")
         
         self.lidar = Lidar(lidar_port) # lidar driver
-        self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0b, 0x0c, 0x0d]) # motor driver
-        self.mpu = MPU6050() # mpu6050 driver
+        
+        if PROD:
+            self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0b, 0x0c, 0x0d]) # motor driver
+            self.mpu = MPU6050() # mpu6050 driver
+        
         self.map = Map() # map
         
         self.httpd = R_HTTPServer()
@@ -140,7 +145,7 @@ class Robot:
         self.phi_delta = dphi
         self.moving = True
         
-        self.motor_driver.move(v1, v2, v3, v4, t)
+        PROD and self.motor_driver.move(v1, v2, v3, v4, t)
         self.movement_start_timestamp = time.time()
 
     def _lidar_thread(self):
@@ -148,8 +153,8 @@ class Robot:
             angle, distance = res
             angle += self.phi
             
-            x = self.rx + distance * math.cos(angle)
-            y = self.ry + distance * math.sin(angle)
+            x = self.rx + distance * math.cos(np.radians(angle))
+            y = self.ry + distance * math.sin(np.radians(angle))
             
             self.map.add_point(x, y)
             
@@ -210,7 +215,7 @@ class Robot:
                 self.logger.warning("Moving stoped due to DRV errors")
                 self.moving = False    
         
-    def handle_ws(self, ws, message):
+    def handle_ws(self, message):
         json_data = json.loads(message)
         
         if json_data["type"] == "move":
@@ -221,25 +226,26 @@ class Robot:
             self.moving = False
 
         elif json_data["type"] == "map":
-            ws.send(f'{{"type": "map_render", "data": "self.map.render()"}}')
+            render = self.map.render(self.rx, self.ry)
+            return f'{{"type": "map_render", "data": "{render}"}}'
             
         elif json_data["type"] == "data":
-            ws.send(json.dumps({
+            return json.dumps({
                 "type": "data",
                 "data": {
                     "x": self.rx,
                     "y": self.ry,
                     "phi": self.rphi,
                 }
-            }))
+            })
             
     def run_threads(self):
         self.threads = {
             "lidar": threading.Thread(target=self._lidar_thread),
-            "mpu": threading.Thread(target=self._mpu_thread),
-            "movement": threading.Thread(target=self._movement_thread),
+            "mpu": threading.Thread(target=self._mpu_thread if PROD else lambda: ...),
+            "movement": threading.Thread(target=self._movement_thread if PROD else lambda: ...),
             "path_update": threading.Thread(target=self._path_update_thread),
-            "error_check": threading.Thread(target=self._error_check_thread),
+            "error_check": threading.Thread(target=self._error_check_thread if PROD else lambda: ...),
             "websocket": self.ws.run(),
             "httpd": self.httpd.run(),
         }
@@ -253,7 +259,17 @@ class Robot:
         
         self.logger.info("Started main. Type `quit` to exit.")
         while (command := input()) != "quit":
-            continue
+            match command:
+                case "printmap":
+                    print("] Loaded chunks:", len(self.map.chunks))
+                    print("] Chunks max values:\n", "|".join([f"{x.d_x} {x.d_y} (max {np.max(x.data)}) (min {np.min(x.data)})\n" for x in self.map.chunks.values()]))
+                case "clearmap":
+                    print("] Clearing map...")
+                    del self.map.chunks
+                    self.map.chunks = {}
+                    print("] Map cleared")
+        self._running = False
 
+PROD and init_motors(1, 50)
 r = Robot(wheel_radius=50, d=150, l=200)
 r.main()

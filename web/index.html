@@ -4,14 +4,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot control panel</title>
 </head>
-<body>
+<body style="padding: 0; margin: 0; overflow: hidden; font-family: sans-serif;">
     <canvas id="canvas" width="700" height="500" style="background-color: black;"></canvas>
     
-    <p class="info">Info...</p>
-    <p class="status">Disconnected</p>
+    <div class="controls" style="display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;">
+        <p class="info">Info...</p>
+        <p class="status">Disconnected</p>
+    
+        <div>
+            <input type="text" id="addr" placeholder="WebSocket IP:PORT">
+            <input type="button" id="connect" value="Connect">
+        </div>
 
-    <input type="text" id="addr">
-    <input type="button" id="connect">
+        <div style="display: flex; flex-direction: row;">
+            <button id="left"><</button>
+            <div style="display: flex; flex-direction: column;">
+                <button id="up">/\</button>
+                <button id="down">\/</button>
+            </div>
+            <button id="right">></button>
+        </div>
+    </div>
+    
 </body>
 
 <script>
@@ -23,6 +37,25 @@
     const addr = document.getElementById('addr');
     const connect = document.getElementById('connect');
 
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight - 100
+
+    var x = 0, y = 0;
+
+    document.getElementById("up").addEventListener("click", function () {
+        y -= 30;
+    });
+    document.getElementById("down").addEventListener("click", function () {
+        y += 30;
+    });
+    document.getElementById("left").addEventListener("click", function () {
+        x += 30;
+    });
+    document.getElementById("right").addEventListener("click", function () {
+        x -= 30;
+    });
+
+
     connect.addEventListener("click", () => {
         if (addr.value.length == 0) return;
         ws = new WebSocket(addr.value);
@@ -31,35 +64,46 @@
             status.innerHTML = "Connected";
         };
 
-        ws.onclose = () => {
+        ws.onclose = (e) => {
+            console.log(e)
             status.innerHTML = "Disconnected";
         };
 
         ws.onerror = () => {
+            console.log(e)
             status.innerHTML = "Error";
         }
 
         ws.onmessage = (e) => {
-            let j = JSON.parse(e.data);
+            // ws://192.168.0.19:1026
+            try {
+                let j = JSON.parse(e.data);
 
-            if (j.type == "data") {
-                info.innerHTML = `x: ${j.data.x} y: ${j.data.y} phi: ${j.data.phi}`;
-            } else if (j.type == "map_render") {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                let img = new Image();
-                img.src = j.data;
-                img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
+                if (j.type == "data") {
+                    info.innerHTML = `x: ${j.data.x} y: ${j.data.y} phi: ${j.data.phi}`;
+                } else if (j.type == "map_render") {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    let img = new Image();
+                    img.src = j.data;
+                    img.onload = () => {
+                        ctx.drawImage(img, x, y);
+                    }
+
+                    console.log("Got image!")
                 }
+            } catch (e) {
+                console.error(e)
             }
         }
 
         setInterval(() => {
+            if (ws && ws.readyState == WebSocket.OPEN)
             ws.send('{"type": "data"}');
         }, 300);
 
         setInterval(() => {
+            if (ws && ws.readyState == WebSocket.OPEN)
             ws.send('{"type": "map"}');
         }, 1500);
     });

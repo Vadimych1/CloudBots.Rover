@@ -6,9 +6,20 @@ from typing import Generator
 logging.basicConfig()
 
 class Lidar:
-    def __init__(self, port: str = "/dev/ttyUSB0"):
+    def __init__(self, port: str = "/dev/ttyUSB0", fallback_ports=["/dev/tty0"]):
         self.logger = logging.getLogger(f"Lidar[{port}]")
-        self.lidar = RPLidar(port)
+        try:
+            self.lidar = RPLidar(port)
+        except:
+            for i, fallback in enumerate(fallback_ports):
+                try:
+                    self.lidar = RPLidar(fallback)
+                    break
+                except:
+                    if i == len(fallback_ports) - 1:
+                        self.logger.error("Cannot connect to lidar, all fallbacks failed. Check if lidar connected or correct address.")
+                        quit(1)
+                        
         self.lidar.reset()
 
     def health(self):
@@ -23,7 +34,7 @@ class Lidar:
     def scan_modes(self):
         return self.lidar.get_scan_modes()
     
-    def scan(self) -> Generator[tuple[int, int]]:
+    def scan(self) -> Generator[tuple[int, int], None, None]:
         self.logger.info("Scan started")
         for data in self.lidar.iter_scans():
             for scan in data:
