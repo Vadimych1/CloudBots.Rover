@@ -1,9 +1,7 @@
-from rplidar import RPLidar
-from miniros.source import Node
+from rplidar import RPLidar, RPLidarException
 import logging
+import time
 from typing import Generator
-
-logging.basicConfig()
 
 class Lidar:
     def __init__(self, port: str = "/dev/ttyUSB0", fallback_ports=["/dev/tty0"]):
@@ -13,14 +11,14 @@ class Lidar:
         except:
             for i, fallback in enumerate(fallback_ports):
                 try:
-                    self.lidar = RPLidar(fallback)
+                    self.lidar = RPLidar(fallback, 115200, 3)
                     break
                 except:
                     if i == len(fallback_ports) - 1:
                         self.logger.error("Cannot connect to lidar, all fallbacks failed. Check if lidar connected or correct address.")
                         quit(1)
                         
-        self.lidar.reset()
+        self.running = False
 
     def health(self):
         return self.lidar.get_health()
@@ -35,16 +33,38 @@ class Lidar:
         return self.lidar.get_scan_modes()
     
     def scan(self) -> Generator[tuple[int, int], None, None]:
-        self.logger.info("Scan started")
-        for data in self.lidar.iter_scans():
-            for scan in data:
-                _, angle, distance = scan
-                if distance <= 0:
-                    continue
+        self.running = True
+        
+        while self.running:
+            self.logger.info("Scan started")
+            c = 0
+            
+            try:
+                for data in self.lidar.iter_measures(max_buf_meas=10000):
+                    _, _, angle, distance = data
+                    if distance <= 0:
+                        continue
 
-                yield angle, distance
+                    yield angle, distance
 
+                    c += 1
+                    
+                    if c % 300 == 0:   
+                        self.lidar.clean_input()
+                    elif c % 15001 == 0:
+                        raise RPLidarException()
+                    
+                    
+            except RPLidarException as e:
+                self.lidar.stop()
+                self.lidar.disconnect()
+                self.lidar.connect()
+            
+            except Exception as e:
+                self.logger.exception(e)
+                
     def stop(self):
+        self.running = False
         self.logger.info("Scan stopped")
         self.lidar.stop_motor()
         self.lidar.stop()

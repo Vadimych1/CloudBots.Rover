@@ -1,6 +1,0 @@
-[2024-11-17 18:49:51,298] main:INFO > Starting robot ticker thread
-[2024-11-17 18:49:51,300] main:INFO > Started robot ticker thread
-[2024-11-17 18:49:51,300] main:INFO > Command listener started. Type command and press Enter to execute it
-[2024-11-17 18:49:53,403] main:INFO > Executing: q
-[2024-11-17 18:49:53,403] main:INFO > Stopping robot ticker thread
-[2024-11-17 18:49:53,407] main:INFO > Stopped robot ticker thread

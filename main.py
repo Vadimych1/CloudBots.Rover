@@ -17,13 +17,21 @@ from src.web.websocket import R_WebSocket
 
 
 PROD = False
+DEBUG = False
 
 
+_h1 = logging.FileHandler(f"logs/{time.asctime().replace(' ', '_')}.log")
+_h2 = logging.StreamHandler(sys.stdout)
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%H:%M:%S",
-    level=logging.DEBUG,
+    handlers=[_h1, _h2],
+    level=logging.INFO if not DEBUG else logging.DEBUG,
 )
+
+# clear logs if here is too much files
+while len(_logfiles := os.listdir("logs")) > 10:
+    os.remove(os.path.join("logs", _logfiles[0]))
 
 
 class Robot:
@@ -199,6 +207,7 @@ class Robot:
             tick = time.time()
         
     def _path_update_thread(self):
+        c = 0
         while self._running:
             if self.moving and self.start and self.end:
                 self.path = self.map.create_path(self.start[0], self.start[1], self.end[0], self.end[1])
@@ -207,7 +216,11 @@ class Robot:
                 for i in range(10):
                     if self.moving: break
                     time.sleep(0.07)
-                    
+            
+            if c % 5 == 0:
+                self.map.haf_update_chunks()
+            
+            c += 1     
                     
     def _error_check_thread(self):
         while self._running:
@@ -226,8 +239,8 @@ class Robot:
             self.moving = False
 
         elif json_data["type"] == "map":
-            render = self.map.render(self.rx, self.ry)
-            return f'{{"type": "map_render", "data": "{render}"}}'
+            render = self.map.render(self.rx, self.ry, *(self.target if self.target else (None, None)))
+            return f'{{"type": "map_render", "data": "{render}", "chunk_minus_offset": {{"x": {self.map.min_chunk_x * 300}, "y": {self.map.min_chunk_y * 300}}}}}'
             
         elif json_data["type"] == "data":
             return json.dumps({
@@ -238,6 +251,10 @@ class Robot:
                     "phi": self.rphi,
                 }
             })
+            
+        elif json_data["type"] == "clearmap":
+            self.logger.info("Incoming request to clear map")
+            self._clearmap()
             
     def run_threads(self):
         self.threads = {
@@ -261,14 +278,36 @@ class Robot:
         while (command := input()) != "quit":
             match command:
                 case "printmap":
-                    print("] Loaded chunks:", len(self.map.chunks))
-                    print("] Chunks max values:\n", "|".join([f"{x.d_x} {x.d_y} (max {np.max(x.data)}) (min {np.min(x.data)})\n" for x in self.map.chunks.values()]))
+                    print("\n] Loaded chunks:", len(self.map.chunks))
+                    print("] Chunks max values:\n|", "|".join([f"{x.d_x} {x.d_y} (max {np.max(x.data)}) (min {np.min(x.data)})\n" for x in self.map.chunks.values()]))
+                
                 case "clearmap":
-                    print("] Clearing map...")
-                    del self.map.chunks
-                    self.map.chunks = {}
-                    print("] Map cleared")
+                    print("\n] Clearing map...")
+                    self._clearmap()
+                    print("] Map cleared\n")
+                    
+                case "printchunksdata":
+                    print("\n] Chunks data:")
+                    for chunk in self.map.chunks.values():
+                        print(chunk.data)
+                
+                case "help":
+                    print(f'\n] ' + ("\n] ".join(["printmap", "clearmap", "help"])) + "\n")
+                        
         self._running = False
+        try:
+            self.threads["websocket"].join()
+        except:
+            pass
+        
+        try:
+            self.threads["httpd"].join()
+        except:
+            pass
+        
+    def _clearmap(self):
+        del self.map.chunks
+        self.map.chunks = self.map._reinit_chunks()
 
 PROD and init_motors(1, 50)
 r = Robot(wheel_radius=50, d=150, l=200)

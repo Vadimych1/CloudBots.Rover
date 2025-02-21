@@ -5,7 +5,7 @@
     <title>Robot control panel</title>
 </head>
 <body style="padding: 0; margin: 0; overflow: hidden; font-family: sans-serif;">
-    <canvas id="canvas" width="700" height="500" style="background-color: black;"></canvas>
+    <canvas id="canvas" width="700" height="500" style="background-color: black; image-rendering: pixelated;" ></canvas>
     
     <div class="controls" style="display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;">
         <p class="info">Info...</p>
@@ -24,6 +24,16 @@
             </div>
             <button id="right">></button>
         </div>
+
+        <input type="range" min="0.1" max="5" value="1" id="zoom">
+
+        <button onclick="(() => {
+            if (ws) {
+                ws.send(JSON.stringify({
+                    type: 'clearmap',
+                }));
+            }
+        })()">Clear map</button>
     </div>
     
 </body>
@@ -36,6 +46,7 @@
 
     const addr = document.getElementById('addr');
     const connect = document.getElementById('connect');
+    const zoom = document.getElementById('zoom');
 
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight - 100
@@ -43,10 +54,10 @@
     var x = 0, y = 0;
 
     document.getElementById("up").addEventListener("click", function () {
-        y -= 30;
+        y += 30;
     });
     document.getElementById("down").addEventListener("click", function () {
-        y += 30;
+        y -= 30;
     });
     document.getElementById("left").addEventListener("click", function () {
         x += 30;
@@ -55,6 +66,17 @@
         x -= 30;
     });
 
+
+    canvas.addEventListener("click", function (e) {
+        if (ws && ws.readyState == WebSocket.OPEN)
+        ws.send(JSON.stringify({
+            "type": "move",
+            "x": (- x + e.clientX + chunks_offsets.x) / 300 * 1000, // convert coordinates from image to map
+            "y": (- y + e.clientY + chunks_offsets.y) / 300 * 1000, // convert coordinates from image to map
+        }))
+    })
+
+    let chunks_offsets = {"x": 0, "y": 0}
 
     connect.addEventListener("click", () => {
         if (addr.value.length == 0) return;
@@ -87,8 +109,10 @@
                     let img = new Image();
                     img.src = j.data;
                     img.onload = () => {
-                        ctx.drawImage(img, x, y);
+                        ctx.drawImage(img, x, y, img.width / zoom.value, img.height / zoom.value);
                     }
+
+                    chunks_offsets = j.chunk_minus_offset
 
                     console.log("Got image!")
                 }

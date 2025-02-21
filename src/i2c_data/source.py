@@ -10,10 +10,13 @@ import platform
 _, _, _, _, arch, _ = platform.uname()
 print("Using arch for I2C:", arch, "\n")
 
-if arch == "aarch64" or arch == "aarch32":
-    _mot = cdll.LoadLibrary("libs/arduino_motor/motor_arm.so")
-else:
-    _mot = cdll.LoadLibrary("libs/arduino_motor/motor.so")
+try:
+    _mot = cdll.LoadLibrary(f"libs/arduino_motor/motor_{arch}.so")
+except:
+    print(f"! Motor library for your system ({arch}) not found or incorrect")
+    print(f"? Try building lib by running (in project root): `cd libs/arduino_motor && sh build.sh`")
+    print(f"? After finishing, rename file `motor.so` to `motor_{arch}.so`")
+    quit(1)
 
 MOT_ERR_SPD = 1 # getError();
 MOT_ERR_DRV = 2 #	getError();

@@ -6,19 +6,37 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 import base64
 import logging
+import cv2
+import time
 
 class Map:
     def __init__(self, path = "./chunks"):
         self.logger = logging.getLogger(f"Map[{path}]")
-        self.chunks = {}
+        self.chunks = self._reinit_chunks()
         self.path = path
-        
+    
+    def _reinit_chunks(self):
+        # return {
+            # (cx, cy): Chunk(cx, cy) for cx in range(-2, 2) for cy in range(-2, 2)
+        # }
+        return {}
+    
     def add_point(self, x, y):
+        x /= 2
+        y /= 2
+        
+        x = int(x)
+        y = int(y)
+        
         chunk_x = int(x // 1000)
         chunk_y = int(y // 1000)
         
         if (chunk_x, chunk_y) not in self.chunks:
+            self.logger.info(f"Creating chunk at {chunk_x} {chunk_y}")
             self.chunks[(chunk_x, chunk_y)] = Chunk.load(chunk_x, chunk_y, self.path)
+            print(self.chunks[(chunk_x, chunk_y)])
+            print(self.chunks[(chunk_x, chunk_y)].data)
+
         self.chunks[(chunk_x, chunk_y)].data[int(x % 1000)][int(y % 1000)] = 255
     
     def create_path(self, x1, y1, x2, y2):
@@ -122,12 +140,15 @@ class Map:
             self.chunks[c] = Chunk.load(*c, self.path)
             
             
-    def render(self, rx, ry):        
+    def render(self, rx, ry, tx, ty):        
         max_chunk_x = max(map(lambda x: x[0], self.chunks.keys()))
         max_chunk_y = max(map(lambda x: x[1], self.chunks.keys()))
         
         min_chunk_x = min(map(lambda x: x[0], self.chunks.keys()))
         min_chunk_y = min(map(lambda x: x[1], self.chunks.keys()))
+        
+        self.min_chunk_x = min_chunk_x
+        self.min_chunk_y = min_chunk_y
         
         w, h = max_chunk_x - min_chunk_x, max_chunk_y - min_chunk_y
                 
@@ -136,6 +157,9 @@ class Map:
         
         img = Image.new('RGB', (int(per_chunk_x * w), int(per_chunk_y * h)), color='black')
         
+        while "chunks" not in self.__dict__.keys():
+            time.sleep(0.01)
+            self.logger.debug("Waiting for chunks")
         
         for (x, y), chunk in self.chunks.copy().items():
             data = Image.fromarray(chunk.data)
@@ -147,15 +171,25 @@ class Map:
                 per_chunk_y * (y - min_chunk_y + 1)
             ))
 
+        output = BytesIO()
+        
+        img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+        img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        
         draw = ImageDraw.ImageDraw(img)
         draw.circle(((rx / 1000 - min_chunk_x) * per_chunk_x, (ry / 1000 - min_chunk_y) * per_chunk_y), 20, "red", "green")
-
-        output = BytesIO()
+        
+        if tx and ty:
+            draw.circle(((tx / 1000 - min_chunk_x) * per_chunk_x, (ty / 1000 - min_chunk_y) * per_chunk_y), 10, "green", "red")
         
         img.save(output, format="PNG")
         img.save("./lastmap.png", format="PNG")
         
         return "data:image/png;base64," + base64.b64encode(output.getvalue()).decode('ascii')
+    
+    def haf_update_chunks(self):
+        for chunk in self.chunks.values():
+            chunk.update_by_haf()
     
     def __del__(self):
         self.logger.info("Saving chunks")
@@ -166,8 +200,17 @@ class Chunk:
     def __init__(self, x, y, data = None):
         self.d_x = x
         self.d_y = y
-        self.data = data or np.zeros((1000, 1000), np.uint8)
+        self.data = data if data else np.zeros((1000, 1000), np.uint8)
+    
+    def update_by_haf(self):
+        lines = cv2.HoughLinesP(self.data, 1, np.pi / 130, 100, minLineLength=10, maxLineGap=40)
+        if lines is None:
+            return
         
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(self.data, (x1, y1), (x2, y2), 255, 1)
+    
     def save(self, path = "./chunks"):
         open(os.path.join(path, f"{self.d_x}_{self.d_y}.chunk"), "wb").write(self.data.flatten().tobytes(order='C'))
         
