@@ -226,7 +226,7 @@ class Robot:
         while self._running:
             if (not self.motor_driver.errors()) and self.moving:
                 self.logger.warning("Moving stoped due to DRV errors")
-                self.moving = False    
+                self.moving = False
         
     def handle_ws(self, message):
         json_data = json.loads(message)
@@ -295,15 +295,11 @@ class Robot:
                     print(f'\n] ' + ("\n] ".join(["printmap", "clearmap", "help"])) + "\n")
                         
         self._running = False
-        try:
-            self.threads["websocket"].join()
-        except:
-            pass
+        logging.shutdown()
         
-        try:
-            self.threads["httpd"].join()
-        except:
-            pass
+        time.sleep(1)
+        
+        quit(0)
         
     def _clearmap(self):
         del self.map.chunks
