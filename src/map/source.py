@@ -126,7 +126,7 @@ class Map:
         start = tuple(map(int, start))
         end = tuple(map(int, end))
         
-        logging.info(f"Running BFS. Start/end: {start}/{end}")
+        self.logger.info(f"Running BFS. Start/end: {start}/{end}")
         
         queue = deque([start])
         visited = set()
@@ -136,7 +136,7 @@ class Map:
         i = 0
         while queue:
             if i % 10000 == 0:
-                logging.info(f"Finding path. Iter {i}")
+                self.logger.info(f"Finding path. Iter {i}")
                 
             current = queue.popleft()
             if current == end:
@@ -146,7 +146,7 @@ class Map:
                     path.append(current)
                     current = parent[current]
                     
-                logging.info(f"Finding path done in {i} iterations.")
+                self.logger.info(f"Finding path done in {i} iterations.")
                 return path[::-1]  # Reverse path
 
             for direction in directions:
@@ -163,7 +163,7 @@ class Map:
                     
             i += 1
             
-        logging.info(f"Finding path done in {i} iterations.")
+        self.logger.info(f"Finding path done in {i} iterations.")
 
         return None  # Return None if no path is found
 
@@ -173,7 +173,7 @@ class Map:
         start = tuple(map(int, start))
         end = tuple(map(int, end))
         
-        logging.info(f"Running A*. Start/end: {start}/{end}")
+        self.logger.info(f"Running A*. Start/end: {start}/{end}")
         
         rows, cols = data.shape
 
@@ -187,7 +187,7 @@ class Map:
         i = 0
         while open_set:
             if i % 10000 == 0:
-                logging.info(f"Finding path. Iter {i}")
+                self.logger.info(f"Finding path. Iter {i}")
             
             if i // 10000 >= 20:
                 break
@@ -202,7 +202,7 @@ class Map:
                     current = came_from[current]
                 path.append(start)
                 
-                logging.info(f"Finding path done in {i} iterations.")
+                self.logger.info(f"Finding path done in {i} iterations.")
                 return path[::-1]  # Возвращаем путь в правильном порядке
 
             for direction in directions:
@@ -223,7 +223,7 @@ class Map:
                             
             i += 1
             
-        logging.info(f"Finding path done in {i} iterations.")
+        self.logger.info(f"Finding path done in {i} iterations.")
 
         return None
         
@@ -249,7 +249,7 @@ class Map:
     def render(self, rx, ry, path, tx, ty):
         while "chunks" not in self.__dict__.keys():
             time.sleep(0.01)
-            self.logger.debug("Waiting for chunks")
+            self.logger.info("Waiting for chunks")
             
         max_chunk_x = max(map(lambda x: x[0], self.chunks.keys()))
         max_chunk_y = max(map(lambda x: x[1], self.chunks.keys()))

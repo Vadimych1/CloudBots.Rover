@@ -209,9 +209,14 @@ class Robot:
     def _path_update_thread(self):
         c = 0
         while self._running:
-            if self.moving and self.start and self.end:
-                self.path = self.map.create_path(self.start[0], self.start[1], self.end[0], self.end[1])
-                time.sleep(0.2)
+            if self.start and self.target and c % 3 == 0:
+                self.logger.info("Updating path")
+                self.path = self.map.create_path(self.rx, self.ry, *self.target)
+                time.sleep(1)
+                
+            elif c % 3 == 0:
+                time.sleep(1)
+            
             else:
                 for i in range(10):
                     if self.moving: break
@@ -226,36 +231,70 @@ class Robot:
         while self._running:
             if (not self.motor_driver.errors()) and self.moving:
                 self.logger.warning("Moving stoped due to DRV errors")
+                
+                self.start = None
+                self.end = None
+                self.path = None
                 self.moving = False
+        
+    def _run_moving(self):
+        prev_start = self.path[0][0] if self.path else (self.rx, self.ry)
+        last_path = self.path.copy() if self.path else None 
+        
+        while last_path and abs(last_path[-1][0] - self.rx) + abs(last_path[-1][1] - self.ry) > 20:    
+            for line in last_path:
+                self._move_and_turn2(prev_start, line[1])
+                
+                while self.moving:
+                    time.sleep(0.05)
+                
+                prev_start = (self.rx, self.ry)
+            
+                if self.path != last_path:
+                    break
+                
+            last_path = self.path.copy()
+        
+        self.logger.info("Movement finished")
         
     def handle_ws(self, message):
         json_data = json.loads(message)
         
-        if json_data["type"] == "move":
-            self.start = (self.rx, self.ry)
-            self.target = (json_data["x"], json_data["y"])
-            self.path = self.map.create_path(*self.start, *self.target)
+        match json_data["type"]:
+            case "move":
+                self.start = (self.rx, self.ry)
+                self.target = (json_data["x"], json_data["y"])
+                self.path = self.map.create_path(*self.start, *self.target)
+                
+            case "run":
+                if self.start and self.end and self.path:
+                    self.logger.info("Runing movement")
+                    self.run_thread = threading.Thread(target=self._run_moving)
+                    self.run_thread.start()
+                    
+                else:
+                    return json.dumps({"type": "error", "data": "Not enough data. Select target"})
+                
+            case "stop":
+                self.moving = False
 
-        elif json_data["type"] == "stop":
-            self.moving = False
-
-        elif json_data["type"] == "map":
-            render = self.map.render(self.rx, self.ry, self.path, *(self.target if self.target else (None, None)))
-            return f'{{"type": "map_render", "data": "{render}", "chunk_minus_offset": {{"x": {self.map.min_chunk_x * 300}, "y": {self.map.min_chunk_y * 300}}}}}'
-            
-        elif json_data["type"] == "data":
-            return json.dumps({
-                "type": "data",
-                "data": {
-                    "x": self.rx,
-                    "y": self.ry,
-                    "phi": self.rphi,
-                }
-            })
-            
-        elif json_data["type"] == "clearmap":
-            self.logger.info("Incoming request to clear map")
-            self._clearmap()
+            case "map":
+                render = self.map.render(self.rx, self.ry, self.path, *(self.target if self.target else (None, None)))
+                return f'{{"type": "map_render", "data": "{render}", "chunk_minus_offset": {{"x": {self.map.min_chunk_x * 300}, "y": {self.map.min_chunk_y * 300}}}}}'
+                
+            case "data":
+                return json.dumps({
+                    "type": "data",
+                    "data": {
+                        "x": self.rx,
+                        "y": self.ry,
+                        "phi": self.rphi,
+                    }
+                })
+                
+            case "clearmap":
+                self.logger.info("Incoming request to clear map")
+                self._clearmap()
             
     def run_threads(self):
         self.threads = {

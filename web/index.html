@@ -1,31 +1,51 @@
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot control panel</title>
+    <title>Robot Control Panel</title>
 </head>
+
 <body style="padding: 0; margin: 0; overflow: hidden; font-family: sans-serif;">
-    <canvas id="canvas" width="700" height="500" style="background-color: black; image-rendering: pixelated;" ></canvas>
-    
-    <div class="controls" style="display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;">
-        <p class="info">Info...</p>
-        <p class="status">Disconnected</p>
-    
+    <canvas id="canvas" style="background-color: black; image-rendering: pixelated;"></canvas>
+
+    <div class="controls"
+        style="display: flex; flex-direction: row; justify-content: space-evenly; align-items: center;">
+        <div style="display: flex; flex-direction: row; align-items: center;">
+            <button id="left"
+                style="width: 30px; height: 30px; outline: none; border: black 1px solid; border-radius: 10px; margin: 2px;">
+                <</button>
+                    <div style="display: flex; flex-direction: column;">
+                        <button id="up"
+                            style="width: 30px; height: 30px; outline: none; border: black 1px solid; border-radius: 10px; margin: 2px;">/\</button>
+                        <button id="reset"
+                            style="width: 30px; height: 30px; outline: none; border: black 1px solid; border-radius: 10px; margin: 2px;">||</button>
+                        <button id="down"
+                            style="width: 30px; height: 30px; outline: none; border: black 1px solid; border-radius: 10px; margin: 2px;">\/</button>
+                    </div>
+                    <button id="right"
+                        style="width: 30px; height: 30px; outline: none; border: black 1px solid; border-radius: 10px; margin: 2px;">></button>
+        </div>
+
         <div>
-            <input type="text" id="addr" placeholder="WebSocket IP:PORT">
-            <input type="button" id="connect" value="Connect">
+            <p style="padding: 0; margin: 0;">Zoom (in dev)</p>
+            <input type="range" min="0.1" max="5" value="1" id="zoom" disabled>
         </div>
 
-        <div style="display: flex; flex-direction: row;">
-            <button id="left"><</button>
-            <div style="display: flex; flex-direction: column;">
-                <button id="up">/\</button>
-                <button id="down">\/</button>
+        <p class="info">Waiting for connection...</p>
+        <p class="status" style="color: orange; background-color: black; padding: 6px; border-radius: 5px;">Disconnected</p>
+
+        <div>
+            <input type="text" id="addr" placeholder="ws://xxx.xxx.xxx.xxx:xxxx"
+                style="outline: none; border: black 1px solid; border-radius: 5px; padding: 3px; background-color: #fff; color: black;">
+            <hr>
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
+                <input type="button" id="connect" value="Connect"
+                    style="background-color: green; color: #fff; outline: none; border: none; padding: 6px; border-radius: 5px;">
+                <input type="button" id="disconnect" value="Disconnect"
+                    style="background-color: red; color: #fff; outline: none; border: none; padding: 6px; border-radius: 5px;">
             </div>
-            <button id="right">></button>
         </div>
-
-        <input type="range" min="0.1" max="5" value="1" id="zoom">
 
         <button onclick="(() => {
             if (ws) {
@@ -33,9 +53,11 @@
                     type: 'clearmap',
                 }));
             }
-        })()">Clear map</button>
+        })()"
+            style="background-color: blue; color: #fff; outline: none; border: none; padding: 6px; border-radius: 5px;">Clear
+            map</button>
     </div>
-    
+
 </body>
 
 <script>
@@ -65,39 +87,65 @@
     document.getElementById("right").addEventListener("click", function () {
         x -= 30;
     });
+    document.getElementById("reset").addEventListener("click", function () {
+        x = 0;
+        y = 0;
+    });
 
 
     canvas.addEventListener("click", function (e) {
         if (ws && ws.readyState == WebSocket.OPEN)
-        ws.send(JSON.stringify({
-            "type": "move",
-            "x": (- x + e.clientX + chunks_offsets.x) / 300 * 1000, // convert coordinates from image to map
-            "y": (- y + e.clientY + chunks_offsets.y) / 300 * 1000, // convert coordinates from image to map
-        }))
+            ws.send(JSON.stringify({
+                "type": "move",
+                "x": (- x + e.clientX + chunks_offsets.x) / 300 * 1000, // convert coordinates from image to map
+                "y": (- y + e.clientY + chunks_offsets.y) / 300 * 1000, // convert coordinates from image to map
+            }))
     })
 
-    let chunks_offsets = {"x": 0, "y": 0}
+    let chunks_offsets = { "x": 0, "y": 0 };
+
+    disconnect.addEventListener("click", () => {
+        if (ws) {
+            ws.close();
+        }
+
+        status.innerHTML = "Disconnected";
+        status.style.color = "orange";
+    })
 
     connect.addEventListener("click", () => {
-        if (addr.value.length == 0) return;
+        if (addr.value.length == 0) {
+            status.innerHTML = "Input error";
+            status.style.color = "yellow";
+            return    
+        }
+
+        if (!addr.value.startsWith("ws://")) {
+            addr.value = "ws://" + addr.value;
+        }
+
         ws = new WebSocket(addr.value);
 
         ws.onopen = () => {
             status.innerHTML = "Connected";
+            status.style.color = "green";
         };
 
         ws.onclose = (e) => {
             console.log(e)
             status.innerHTML = "Disconnected";
+            status.style.color = "orange";
         };
 
-        ws.onerror = () => {
-            console.log(e)
-            status.innerHTML = "Error";
+        ws.onerror = (e) => {
+            setTimeout(() => {
+                console.log(e)
+                status.innerHTML = "Error";
+                status.style.color = "red";    
+            }, 100);
         }
 
         ws.onmessage = (e) => {
-            // ws://192.168.0.19:1026
             try {
                 let j = JSON.parse(e.data);
 
@@ -105,7 +153,7 @@
                     info.innerHTML = `x: ${j.data.x} y: ${j.data.y} phi: ${j.data.phi}`;
                 } else if (j.type == "map_render") {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    
+
                     let img = new Image();
                     img.src = j.data;
                     img.onload = () => {
@@ -120,19 +168,20 @@
                 console.error(e)
             }
         }
-
-        setInterval(() => {
-            if (ws && ws.readyState == WebSocket.OPEN)
-            ws.send('{"type": "data"}');
-        }, 300);
-
-        setInterval(() => {
-            if (ws && ws.readyState == WebSocket.OPEN)
-            ws.send('{"type": "map"}');
-        }, 1500);
     });
 
+    setInterval(() => {
+        if (ws && ws.readyState == WebSocket.OPEN)
+            ws.send('{"type": "data"}');
+    }, 300);
+
+    setInterval(() => {
+        if (ws && ws.readyState == WebSocket.OPEN)
+            ws.send('{"type": "map"}');
+    }, 1500);
+
     var ws;
+
 </script>
 
 </html>
