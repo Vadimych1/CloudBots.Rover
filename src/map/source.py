@@ -8,6 +8,7 @@ import base64
 import logging
 import cv2
 import time
+import heapq
 
 class Map:
     def __init__(self, path = "./chunks"):
@@ -16,10 +17,10 @@ class Map:
         self.path = path
     
     def _reinit_chunks(self):
-        # return {
-            # (cx, cy): Chunk(cx, cy) for cx in range(-2, 2) for cy in range(-2, 2)
-        # }
-        return {}
+        return {
+            (cx, cy): Chunk(cx, cy) for cx in range(-2, 2) for cy in range(-2, 2)
+        }
+        # return {}
     
     def add_point(self, x, y):
         x /= 2
@@ -34,8 +35,8 @@ class Map:
         if (chunk_x, chunk_y) not in self.chunks:
             self.logger.info(f"Creating chunk at {chunk_x} {chunk_y}")
             self.chunks[(chunk_x, chunk_y)] = Chunk.load(chunk_x, chunk_y, self.path)
-            print(self.chunks[(chunk_x, chunk_y)])
-            print(self.chunks[(chunk_x, chunk_y)].data)
+            # print(self.chunks[(chunk_x, chunk_y)])
+            # print(self.chunks[(chunk_x, chunk_y)].data)
 
         self.chunks[(chunk_x, chunk_y)].data[int(x % 1000)][int(y % 1000)] = 255
     
@@ -44,8 +45,13 @@ class Map:
         
         path = self._find_path(x1, y1, x2, y2)
         
+        self.logger.info(f"Path found! Processing {len(path) if path else 0} nodes")
+        
         lines = []
         current_line = []
+        
+        if path is None:
+            return None
 
         prev = path[0]
         p_dx, p_dy = None, None
@@ -66,8 +72,8 @@ class Map:
 
         lines.append((current_line[0], current_line[-1]))
         
+        
         return lines
-
     
     def _find_path(self, x1, y1, x2, y2):
         start_chunk_x = x1 // 1000
@@ -82,25 +88,56 @@ class Map:
         
         self._load_path_chunks((start_chunk_x, start_chunk_y), (end_chunk_x, end_chunk_y))
         
-        constructed_map = np.zeros((1000 * w, 1000 * h))        
+        constructed_map = np.zeros((int(1000 * w), int(1000 * h)))        
         
-        for x in range(w):
-            for y in range(h):
+        for x in range(int(w)):
+            for y in range(int(h)):
                 d = (x + start_x, y + start_y)
                 constructed_map[1000 * x:1000 * (x + 1), 1000 * y:1000 * (y + 1)] = self.chunks[d].data
                 
-        return self._bfs(constructed_map, (x1, y1), (x2, y2))
-                
+        coord_x = min(x1, x2)
+        coord_y = min(y1, y2)
         
+        x_offs = 0
+        y_offs = 0
+        
+        if coord_x < 0:
+            x_offs = abs(coord_x) // 1000 * (coord_x / abs(coord_x)) * 1000
+            x_offs -= 1000 if coord_x - x_offs < 0 else 0
+        
+        if coord_y < 0:
+            y_offs = abs(coord_y) // 1000 * (coord_y / abs(coord_y)) * 1000
+            y_offs -= 1000 if coord_y - y_offs < 0 else 0
+        
+        
+        self.logger.info(f"Constructed map. Size: {constructed_map.shape}. Using BFS... {x1, x2, y1, y2, x_offs, y_offs}")
+        
+        self.path_offset = (x_offs, y_offs) 
+        
+        # return self._bfs(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
+        return self._astar(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
+    
+                
+    
+    # PATHFINDING ALGOS
     def _bfs(self, data, start, end):
         directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+        
+        start = tuple(map(int, start))
+        end = tuple(map(int, end))
+        
+        logging.info(f"Running BFS. Start/end: {start}/{end}")
         
         queue = deque([start])
         visited = set()
         visited.add(start)
         parent = {start: None}
 
+        i = 0
         while queue:
+            if i % 10000 == 0:
+                logging.info(f"Finding path. Iter {i}")
+                
             current = queue.popleft()
             if current == end:
                 # Reconstruct path
@@ -108,6 +145,8 @@ class Map:
                 while current is not None:
                     path.append(current)
                     current = parent[current]
+                    
+                logging.info(f"Finding path done in {i} iterations.")
                 return path[::-1]  # Reverse path
 
             for direction in directions:
@@ -121,9 +160,76 @@ class Map:
                     queue.append(neighbor)
                     visited.add(neighbor)
                     parent[neighbor] = current
+                    
+            i += 1
+            
+        logging.info(f"Finding path done in {i} iterations.")
 
         return None  # Return None if no path is found
 
+    def _astar(self, data, start, end):
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+        
+        start = tuple(map(int, start))
+        end = tuple(map(int, end))
+        
+        logging.info(f"Running A*. Start/end: {start}/{end}")
+        
+        rows, cols = data.shape
+
+        open_set = []
+        heapq.heappush(open_set, (0, start))  # Сохраняем кортеж (приоритет, координаты)
+        
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self._astar_heuristic(start, end)}
+
+        i = 0
+        while open_set:
+            if i % 10000 == 0:
+                logging.info(f"Finding path. Iter {i}")
+            
+            if i // 10000 >= 20:
+                break
+                
+            current = heapq.heappop(open_set)[1]
+
+            if current == end:
+                # Воссоздание пути
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.append(start)
+                
+                logging.info(f"Finding path done in {i} iterations.")
+                return path[::-1]  # Возвращаем путь в правильном порядке
+
+            for direction in directions:
+                neighbor = (current[0] + direction[0], current[1] + direction[1])
+
+                # Проверяем границы карты и проходимость
+                if (0 <= neighbor[0] < rows) and (0 <= neighbor[1] < cols) and (data[neighbor] == 0):
+                    tentative_g_score = g_score[current] + 1  # Предполагаемое расстояние до соседа
+
+                    if tentative_g_score < g_score.get(neighbor, float('inf')):
+                        # Этот путь лучше, чем любой, который мы рассматривали
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = tentative_g_score + self._astar_heuristic(neighbor, end)
+
+                        if neighbor not in [i[1] for i in open_set]:
+                            heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                            
+            i += 1
+            
+        logging.info(f"Finding path done in {i} iterations.")
+
+        return None
+        
+    @staticmethod
+    def _astar_heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
         
     def _load_path_chunks(self, start_chunk, end_chunk):
         chunks_to_load = {start_chunk, end_chunk}
@@ -140,7 +246,11 @@ class Map:
             self.chunks[c] = Chunk.load(*c, self.path)
             
             
-    def render(self, rx, ry, tx, ty):        
+    def render(self, rx, ry, path, tx, ty):
+        while "chunks" not in self.__dict__.keys():
+            time.sleep(0.01)
+            self.logger.debug("Waiting for chunks")
+            
         max_chunk_x = max(map(lambda x: x[0], self.chunks.keys()))
         max_chunk_y = max(map(lambda x: x[1], self.chunks.keys()))
         
@@ -157,18 +267,14 @@ class Map:
         
         img = Image.new('RGB', (int(per_chunk_x * w), int(per_chunk_y * h)), color='black')
         
-        while "chunks" not in self.__dict__.keys():
-            time.sleep(0.01)
-            self.logger.debug("Waiting for chunks")
-        
         for (x, y), chunk in self.chunks.copy().items():
             data = Image.fromarray(chunk.data)
             data = data.resize((per_chunk_x, per_chunk_y))
             img.paste(data, (
-                per_chunk_x * (x - min_chunk_x), 
-                per_chunk_y * (y - min_chunk_y), 
-                per_chunk_x * (x - min_chunk_x + 1), 
-                per_chunk_y * (y - min_chunk_y + 1)
+                int(per_chunk_x * (x - min_chunk_x)), 
+                int(per_chunk_y * (y - min_chunk_y)), 
+                int(per_chunk_x * (x - min_chunk_x + 1)), 
+                int(per_chunk_y * (y - min_chunk_y + 1))
             ))
 
         output = BytesIO()
@@ -182,6 +288,11 @@ class Map:
         if tx and ty:
             draw.circle(((tx / 1000 - min_chunk_x) * per_chunk_x, (ty / 1000 - min_chunk_y) * per_chunk_y), 10, "green", "red")
         
+        if path:
+            offs_x, offs_y = self.path_offset
+            for line in path:
+                draw.line(tuple(map(lambda l: ((l[0] + offs_x)/1000*per_chunk_x - min_chunk_x * per_chunk_x, (l[1] + offs_y)/1000*per_chunk_y - min_chunk_y * per_chunk_y), line)), "blue", 5)
+                
         img.save(output, format="PNG")
         img.save("./lastmap.png", format="PNG")
         

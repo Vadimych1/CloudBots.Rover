@@ -234,12 +234,13 @@ class Robot:
         if json_data["type"] == "move":
             self.start = (self.rx, self.ry)
             self.target = (json_data["x"], json_data["y"])
+            self.path = self.map.create_path(*self.start, *self.target)
 
         elif json_data["type"] == "stop":
             self.moving = False
 
         elif json_data["type"] == "map":
-            render = self.map.render(self.rx, self.ry, *(self.target if self.target else (None, None)))
+            render = self.map.render(self.rx, self.ry, self.path, *(self.target if self.target else (None, None)))
             return f'{{"type": "map_render", "data": "{render}", "chunk_minus_offset": {{"x": {self.map.min_chunk_x * 300}, "y": {self.map.min_chunk_y * 300}}}}}'
             
         elif json_data["type"] == "data":
