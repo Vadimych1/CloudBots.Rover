@@ -16,7 +16,7 @@ from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
 
 
-PROD = False
+PROD = True
 DEBUG = False
 
 
@@ -58,7 +58,11 @@ class Robot:
         self.lidar = Lidar(lidar_port) # lidar driver
         
         if PROD:
-            self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0b, 0x0c, 0x0d]) # motor driver
+            # 0x0a - fwd_left
+            # 0x0c - fwd_right
+            # 0x0b - bwd_left
+            # 0x0d - bwd_right
+            self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0c, 0x0b, 0x0d]) # motor driver
             self.mpu = MPU6050() # mpu6050 driver
         
         self.map = Map() # map
@@ -106,22 +110,33 @@ class Robot:
     :rtype: tuple[float, float, float, float]
     """
     def _calculate_wheels_speed_by_movement(self, vx: float, vy: float, w: float):
-        return (
-            (1 / self.wheel_radius)
-            * np.array(
-                [
-                    [1, 1, 1, 1],
-                    [-1, 1, -1, 1],
-                    [
-                        -(self.d + self.l) / 2,
-                        -(self.d + self.l) / 2,
-                        (self.d + self.l) / 2,
-                        (self.d + self.l) / 2,
-                    ],
-                ]
-            ).T
-            @ np.array([vx, vy, w]).T
-        )
+        vx *= 2
+        vy *= 2
+        
+        # vx /= max(vx, vy)
+        # vy /= max(vx,vy)
+        
+        d = np.array([
+            (1/self.wheel_radius) * (vx - vy - (self.l + self.d) * w), # fwd left
+            (1/self.wheel_radius) * (vx + vy + (self.l + self.d) * w), # fwd right
+            (1/self.wheel_radius) * (vx + vy - (self.l + self.d) * w), # bwd left
+            (1/self.wheel_radius) * (vx - vy + (self.l + self.d) * w), # bwd right
+        ]) * 60
+        
+        n = 0
+        while max(d) > 400:
+            vx /= 2
+            vy /= 2
+            w /= 2
+            d = np.array([
+                (1/self.wheel_radius) * (vx - vy - (self.l + self.d) * w), # fwd left
+                (1/self.wheel_radius) * (vx + vy + (self.l + self.d) * w), # fwd right
+                (1/self.wheel_radius) * (vx + vy - (self.l + self.d) * w), # bwd left
+                (1/self.wheel_radius) * (vx - vy + (self.l + self.d) * w), # bwd right
+            ]) * 60
+            n += 1
+    
+        return d, 1 / (2 ** n)
 
     """
     Move robot to point and turn to angle.
@@ -310,6 +325,23 @@ class Robot:
         del self.map.chunks
         self.map.chunks = self.map._reinit_chunks()
 
-PROD and init_motors(1, 50)
+# PROD and init_motors(1, 50)
+# r = Robot(wheel_radius=50, d=150, l=200)
+# r.main()
+
+init_motors(1, 50)
 r = Robot(wheel_radius=50, d=150, l=200)
-r.main()
+
+ang = np.pi / 6
+phi = np.pi / 4
+t = 4
+
+q, n = r._calculate_wheels_speed_by_movement(100 * math.cos(ang), 100 * math.sin(ang), phi) * np.array([-1, 1, -1, 1])
+# q = r._calculate_wheels_speed_by_movement(100, 0, 0) * np.array([-1, 1, -1, 1]) * 60
+# q = r._calculate_wheels_speed_by_movement(0, 100, 0) * np.array([-1, 1, -1, 1]) * 60
+# q = r._calculate_wheels_speed_by_movement(25*math.sqrt(2), 25*math.sqrt(2), 0) * np.array([-1, 1, -1, 1]) * 60
+
+print(q, sum(q), n)
+# r.motor_driver.move(q, t)
+# r.motor_driver.only(70, 1, 0x0c)
+time.sleep(t)

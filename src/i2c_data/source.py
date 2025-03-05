@@ -233,7 +233,7 @@ class BaseMultiMotorDriver:
     :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
     :@param motor_sides: list of motor directions (True - default/False - reversed)
     """
-    def __init__(self, motor_addrs: list):
+    def __init__(self, motor_addrs: list[int], invert: list[int] = []):
         self.logger = logging.getLogger("MotorDriver")
         
         self.prevstate = 1
@@ -245,23 +245,31 @@ class BaseMultiMotorDriver:
         
         for mot in self.motors:
             mot.setDirection(True)
+            mot.setInvGear(False, False)
+            mot.setDirection(True)
             mot.setMagnet(2)
             mot.setError(90)
-            mot.setInvGear(False, False)
             mot.setStopNeutral(True)
             mot.setPullI2C(True)
             mot.setReducer(200.0)
             time.sleep(0.06)
             
-        logging.log("INFO", "Motors initialized")
+        self.logger.info("Motors initialized")
             
-    def move(self, speeds: float, time: float):
-        for i, motor in enumerate(self.motors[::self.prevstatce]):
-            motor.setSpeed(int(speeds[i]*9.549296585513718/np.pi), MOT_RPM, time, MOT_SEC) # convert rad/s to rpm and run motor
+    def move(self, speeds: list[float], m_time: float):
+        for i, motor in (reversed(enumerate(self.motors)) if self.prevstate < 0 else enumerate(self.motors)):
+            self.logger.info(f"Moving {i}")
+            motor.setSpeed(int(speeds[i]*9.549296585513718/np.pi), MOT_RPM, m_time, MOT_SEC) # convert rad/s to rpm and run motor
             time.sleep(0.01)
             
         self.prevstate *= -1
-    
+        
+    def only(self, speed: float, m_time: float, addr: int):
+        for m in self.motors:
+            if m.addr == addr:
+                m.setSpeed(int(speed*9.549296585513718/np.pi), MOT_RPM, m_time, MOT_SEC)
+                break
+                
     def stop(self):
         for motor in self.motors:
             motor.stop()

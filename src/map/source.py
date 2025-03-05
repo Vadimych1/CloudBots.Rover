@@ -115,9 +115,7 @@ class Map:
         self.path_offset = (x_offs, y_offs) 
         
         # return self._bfs(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
-        return self._astar(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
-    
-                
+        return self._astar(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))            
     
     # PATHFINDING ALGOS
     def _bfs(self, data, start, end):
@@ -304,7 +302,7 @@ class Map:
     
     def __del__(self):
         self.logger.info("Saving chunks")
-        for chunk in self.chunks:
+        for chunk in self.chunks.values():
             chunk.save(self.path)
         
 class Chunk:    
