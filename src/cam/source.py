@@ -187,7 +187,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         return dominant
 
 
-    def process(self, f: MatLike, threshold: int = 25, alpha: int = 15, canny_A: int = 150, canny_B: int = 200, percent_height: float = 2/3) -> ObstacleSide:
+    def process(self, f: MatLike, threshold: int = 25, alpha: int = 5, canny_A: int = 200, canny_B: int = 200, percent_height: float = 2/3) -> ObstacleSide:
         """
         Processes input image to detect obstacles
 
@@ -210,12 +210,16 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         blur = cv.GaussianBlur(masked, (alpha, alpha), 10, borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
         canny = cv.Canny(blur, canny_A, canny_B) # get object borders by Canny
 
+        cv.imshow("blur", blur)
+        cv.imshow("canny", canny)
+
         circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
         lines = cv.HoughLinesP(canny, 1, np.pi/180, 80, None, 0, 10) # detect lines by Hough
 
         # get only vertical lines that start above `percent_height`
         result = []
-        if lines:
+        if type(lines) != type(None):
+            print("L", lines)
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 if max(y1, y2) > f.shape[0] - self.MAX_BOTTOM_PADDING and abs(y1 - y2) > self.MIN_LENGTH and abs(x1 - x2) < self.MAX_X_DELTA:
@@ -224,9 +228,10 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
             return None
 
 
-        if circles:
+        if type(circles) != type(None):
+            print("C", circles)
             for circle in circles:
-                cx, cy, _ = circle
+                cx, cy, _ = circle[0]
                 if cy > f.shape[0] - self.MAX_BOTTOM_PADDING:
                     result.append(cx)
         else:
@@ -246,3 +251,18 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         else:
             return None
 
+
+d = R_ObstacleDetectorHandler()
+
+cap = cv.VideoCapture(0)
+while True:
+    ret, frame = cap.read()
+
+    result = d.process(frame)
+
+    print(result)
+
+    if cv.waitKey(1) == ord('q'):
+        break
+
+cap.release()
