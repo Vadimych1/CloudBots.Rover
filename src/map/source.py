@@ -297,7 +297,7 @@ class Map:
         return "data:image/png;base64," + base64.b64encode(output.getvalue()).decode('ascii')
     
     def haf_update_chunks(self):
-        for chunk in self.chunks.values():
+        for chunk in self.chunks.copy().values():
             chunk.update_by_haf()
     
     def __del__(self):

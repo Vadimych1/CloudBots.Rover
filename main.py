@@ -20,7 +20,7 @@ from src.web.websocket import R_WebSocket
 
 dotenv.load_dotenv(".env")
 PROD = os.getenv('PROD') == "1"
-DEBUG = os.getenv('DEBUG') == "1"
+DEBUG = False
 print(f"Running with:\nPROD:{PROD}\nDEBUG:{DEBUG}\n")
 
 
@@ -400,6 +400,12 @@ class Robot:
                 
                 case "help":
                     print(f'\n] ' + ("\n] ".join(["printmap", "clearmap", "help"])) + "\n")
+
+                case "cv":
+                    self._cv_act()
+
+                case "cva":
+                    self._cv_act_all()
                         
         self._running = False
         logging.shutdown()
@@ -415,6 +421,15 @@ class Robot:
         del self.map.chunks
         self.map.chunks = self.map._reinit_chunks()
 
+    """
+    Get current CV Action
+    """
+    def _cv_act(self):
+        print(self.obstacle_detetor.result)
+    
+    def _cv_act_all(self):
+        print(self.obstacle_detetor.results)
+
 
 def main():
     PROD and init_motors(1, 50)
@@ -422,7 +437,7 @@ def main():
     r.main()
 
 
-if __name__ == "__main__" and not DEBUG:
+if __name__ == "__main__":
     main()
     exit(0)
 

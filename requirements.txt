@@ -1,5 +1,5 @@
 python-dotenv>=0.0.5
 pillow==8.4.0
-numpy==1.19.5
-websockets==Any
-dotenv==Any
+websockets;
+dotenv;
+scikit-learn;

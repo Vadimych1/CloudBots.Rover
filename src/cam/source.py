@@ -24,7 +24,7 @@ class R_BaseCamHandler:
         self.ready = False
 
     def __call__(self, frame: MatLike):
-        if not frame:
+        if type(frame) == type(None):
             return
         
         self.frame = frame
@@ -44,7 +44,12 @@ class R_BaseCamHandler:
         """
         Returns a copy of current data frame 
         """
-        return self.get().copy()
+        r = self.get()
+
+        if type(r) == type(None):
+            return None
+        else:
+            return r.copy()
     
     def loop(self):
         """
@@ -156,11 +161,11 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         while self.running:
             frame = self.cget()
 
-            if frame:
+            if type(frame) != type(None):
                 self.results.append(self.process(frame))
-                if len(self.results > 7):
-                    self.results = self.result[1:]
-                self.result = max(g(sorted(self.results)), key=lambda x, v:(len(list(v)),-self.results.index(x)))[0] # get the most common value
+                if len(self.results) > 7:
+                    self.results = self.results[1:]
+                self.result = Counter(self.results).most_common(1)[0][0]
             else:
                 time.sleep(0.02)
 
@@ -202,7 +207,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         f = f[int(f.shape[0]*(1-percent_height)):f.shape[0]] # process only percent_height of image (from bottom)
         dominant = R_ObstacleDetectorHandler.get_dominant(f) # get the dominant color of image (the mostly seen)
         masked = cv.inRange(f, dominant - threshold, dominant + threshold) # apply mask by dominant color
-        blur = cv.GaussianBlur(masked, (alpha, alpha), borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
+        blur = cv.GaussianBlur(masked, (alpha, alpha), 10, borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
         canny = cv.Canny(blur, canny_A, canny_B) # get object borders by Canny
 
         circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
