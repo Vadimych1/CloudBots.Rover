@@ -1,4 +1,5 @@
 python-dotenv>=0.0.5
 pillow==8.4.0
 numpy==1.19.5
-Jetson.GPIO==any
+websockets==Any
+dotenv==Any

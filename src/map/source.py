@@ -292,7 +292,7 @@ class Map:
                 draw.line(tuple(map(lambda l: ((l[0] + offs_x)/1000*per_chunk_x - min_chunk_x * per_chunk_x, (l[1] + offs_y)/1000*per_chunk_y - min_chunk_y * per_chunk_y), line)), "blue", 5)
                 
         img.save(output, format="PNG")
-        img.save("./lastmap.png", format="PNG")
+        img.save("logs/lastmap.png", format="PNG")
         
         return "data:image/png;base64," + base64.b64encode(output.getvalue()).decode('ascii')
     

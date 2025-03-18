@@ -1,3 +1,4 @@
 count.py
 .git-credentials
 venv
+**/__pycache__

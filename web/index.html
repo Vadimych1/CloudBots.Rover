@@ -61,6 +61,8 @@
 </body>
 
 <script>
+    document.querySelector('#addr').value = `ws://${location.hostname}:1026`
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const info = document.querySelector('.info');

@@ -4,6 +4,12 @@ import time
 from typing import Generator
 
 class Lidar:
+    """
+    Class for lidar scanning
+
+    :param port: the USB port of lidar. Default: "/dev/ttyUSB0"
+    :param fallback_ports: ports to check if lidar os not on the default port
+    """
     def __init__(self, port: str = "/dev/ttyUSB0", fallback_ports=["/dev/tty0"]):
         self.logger = logging.getLogger(f"Lidar[{port}]")
         try:
@@ -20,19 +26,41 @@ class Lidar:
                         
         self.running = False
 
+
     def health(self):
+        """
+        Returns lidar health
+        """
         return self.lidar.get_health()
 
+
     def info(self):
+        """
+        Returns lidar info
+        """
         return self.lidar.get_info()
     
+
     def samplerate(self):
+        """
+        Returns lidar samplerate
+        """
         return self.lidar.get_samplerate()
     
+
     def scan_modes(self):
+        """
+        Returns all lidar scan modes
+        """
         return self.lidar.get_scan_modes()
     
-    def scan(self) -> Generator[tuple[int, int], None, None]:
+
+    def scan(self, buffer: int = 10000) -> Generator[tuple[int, int], None, None]:
+        """
+        Start scan
+        Yields every scan value
+        """
+
         self.running = True
         
         while self.running:
@@ -40,7 +68,7 @@ class Lidar:
             c = 0
             
             try:
-                for data in self.lidar.iter_measures(max_buf_meas=10000):
+                for data in self.lidar.iter_measures(max_buf_meas=buffer):
                     _, _, angle, distance = data
                     if distance <= 0:
                         continue
@@ -62,56 +90,14 @@ class Lidar:
             
             except Exception as e:
                 self.logger.exception(e)
-                
+
+       
     def stop(self):
+        """
+        Stop lidar
+        """     
         self.running = False
         self.logger.info("Scan stopped")
         self.lidar.stop_motor()
         self.lidar.stop()
 
-# l = Lidar()
-# print(q)
-
-# size = 300
-# p = 20
-
-
-# max_data_q = 0
-# def q(new_scan: bool, quality: int, angle: float, distance: float) -> None:
-#     global max_data_q
-#     if distance != 0.0:
-#         max_data_q = max(max_data_q, quality)
-#         angle = math.radians(angle)
-#         my_map[min(size - 1, max(0, int(distance*math.cos(angle)/p + size / 2)))][min(size - 1, max(0, int(distance*math.sin(angle)/p + size / 2)))] = quality
-
-# l.scan(q)
-
-# c = ".,aq:;!#Q$%@"
-# cl = len(c)
-# print(max_data_q)
-
-# saveInFile = False
-# f = open("out.txt", "w") if saveInFile else sys.stdout
-
-# writer = cv.VideoWriter("out.mp4", cv.VideoWriter_fourcc(*"mp4v"), 10, (300, 300))
-
-# try:
-#     while True:
-        
-#         q = l.scan()
-#         frame = np.zeros((300, 300, 3), dtype=np.uint8)
-
-#         for y, row in enumerate(q):
-#             for x, quality in enumerate(row):
-#                 frame[y, x, 0] = int(quality / cl * 255)
-#                 frame[y, x, 1] = int(quality / cl * 255)
-#                 frame[y, x, 2] = int(quality / cl * 255)
-
-#         writer.write(frame)
-#         time.sleep(0.1)
-# except:
-#     writer.release()
-
-
-# while True:
-    # time.sleep(10)

@@ -1,3 +1,4 @@
+import dotenv
 import logging
 import time
 import sys, os
@@ -9,6 +10,7 @@ import threading
 import json
 
 
+from src.cam.source import R_Cam, R_ObstacleDetectorHandler
 from src.lidar_module.source import Lidar
 from src.i2c_data.source import BaseMultiMotorDriver, MPU6050, init_motors
 from src.map.source import Map
@@ -16,10 +18,13 @@ from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
 
 
-PROD = True
-DEBUG = False
+dotenv.load_dotenv(".env")
+PROD = os.getenv('PROD') == "1"
+DEBUG = os.getenv('DEBUG') == "1"
+print(f"Running with:\nPROD:{PROD}\nDEBUG:{DEBUG}\n")
 
 
+# logging configuration
 _h1 = logging.FileHandler(f"logs/{time.asctime().replace(' ', '_')}.log")
 _h2 = logging.StreamHandler(sys.stdout)
 logging.basicConfig(
@@ -28,6 +33,7 @@ logging.basicConfig(
     handlers=[_h1, _h2],
     level=logging.INFO if not DEBUG else logging.DEBUG,
 )
+
 
 # clear logs if here is too much files
 while len(_logfiles := os.listdir("logs")) > 10:
@@ -54,50 +60,63 @@ class Robot:
         self, wheel_radius: float, d: float, l: float, lidar_port="/dev/ttyUSB0"
     ):
         self.logger = logging.getLogger("Main")
-        
-        self.lidar = Lidar(lidar_port) # lidar driver
-        
+
         if PROD:
+            # fwd_left, fwd_right, bwd_left, bwd_right
+            #
+            # current:
+            #
             # 0x0a - fwd_left
             # 0x0c - fwd_right
             # 0x0b - bwd_left
             # 0x0d - bwd_right
+            
             self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0c, 0x0b, 0x0d]) # motor driver
             self.mpu = MPU6050() # mpu6050 driver
         
+        self.lidar = Lidar(lidar_port) # lidar driver
         self.map = Map() # map
         
-        self.httpd = R_HTTPServer()
-        self.ws = R_WebSocket(self.handle_ws)
 
+        self.httpd = R_HTTPServer() # HTTP server on port 1025
+        self.ws = R_WebSocket(self.handle_ws) # WS server on port 1026
         self.wheel_radius = wheel_radius
-
-        self.d = d
-        self.l = l
-
-        self.rx = 0
-        self.ry = 0
-        self.rphi = 0
-        self.x = 0
-        self.y = 0
-        self.phi = 0
+        self.d = d # width of robot
+        self.l = l # length of robot
+        self.rx = 0 # "real" X pos
+        self.ry = 0 # "real" Y pos
+        self.rphi = 0 # "real" Z rotation
+        self.x = 0 # prev dot X pos
+        self.y = 0 # prev dot Y pos
+        self.phi = 0 # prev Z rotation
         
-        self.mpu_acc = (0, 0)
-        self.mpu_gyro = 0
-        
-        self.movement_start_timestamp = 0
-        self.movement_time = 0
-        self.x_delta = 0
-        self.y_delta = 0
-        self.phi_delta = 0        
-        self.scheduled_movements = deque()
-        self.moving = False
-        
-        self._running = True
 
-        self.path = None
-        self.start = None
-        self.target = None
+        self.mpu_acc = (0, 0) # MPU acc data
+        self.mpu_gyro = 0 # MPU gyro data
+        
+
+        self.movement_start_timestamp = 0 # when movement was started (to calc real positions)
+        self.movement_time = 0 # how much movement will take
+        self.x_delta = 0 # delta x in movement
+        self.y_delta = 0 # delta y in movement
+        self.phi_delta = 0 # delta z rotation
+        self.scheduled_movements = deque() # all movements added here if now moving and move requested
+        self.moving = False # is now moving?
+        
+
+        self._running = True # is bot running? (mainloop)
+
+
+        self.path = None # current path
+        self.start = None # path start
+        self.target = None # path end
+
+
+        # camera
+        self.cam = R_Cam(0)
+        self.obstacle_detetor = R_ObstacleDetectorHandler()
+        self.cam.add_handler(self.obstacle_detetor)
+
 
     """
     Calculate wheels speed based on robot movement.
@@ -109,12 +128,9 @@ class Robot:
     :return: (v1, v2, v3, v4)
     :rtype: tuple[float, float, float, float]
     """
-    def _calculate_wheels_speed_by_movement(self, vx: float, vy: float, w: float):
+    def _calculate_wheels_speed_by_movement(self, vx: float, vy: float, w: float) -> tuple[float, float, float, float]:
         vx *= 2
         vy *= 2
-        
-        # vx /= max(vx, vy)
-        # vy /= max(vx,vy)
         
         d = np.array([
             (1/self.wheel_radius) * (vx - vy - (self.l + self.d) * w), # fwd left
@@ -123,6 +139,8 @@ class Robot:
             (1/self.wheel_radius) * (vx - vy + (self.l + self.d) * w), # bwd right
         ]) * 60
         
+        # if wheel rotates with speed > 400 then
+        # increase movement time and recalc
         n = 0
         while max(d) > 400:
             vx /= 2
@@ -136,7 +154,9 @@ class Robot:
             ]) * 60
             n += 1
     
+        # return wheels speeds and how much time was decreased 
         return d, 1 / (2 ** n)
+
 
     """
     Move robot to point and turn to angle.
@@ -171,6 +191,10 @@ class Robot:
         PROD and self.motor_driver.move(v1, v2, v3, v4, t)
         self.movement_start_timestamp = time.time()
 
+
+    """
+    Thread for lidar data calculation
+    """
     def _lidar_thread(self):
         for res in self.lidar.scan():
             angle, distance = res
@@ -184,6 +208,10 @@ class Robot:
             if not self._running:
                 break
 
+
+    """
+    Thread for MPU data calculation
+    """
     def _mpu_thread(self):
         tick = time.time()
         while self._running:
@@ -192,6 +220,9 @@ class Robot:
             tick = t
             time.sleep(0.05)
         
+    """
+    Thread for handling movement
+    """
     def _movement_thread(self):
         tick = time.time()
         
@@ -221,6 +252,9 @@ class Robot:
             time.sleep(0.05)
             tick = time.time()
         
+    """
+    Thread for updating path
+    """
     def _path_update_thread(self):
         c = 0
         while self._running:
@@ -242,6 +276,9 @@ class Robot:
             
             c += 1     
                     
+    """
+    Thread for checking error level on motor drivers
+    """
     def _error_check_thread(self):
         while self._running:
             if (not self.motor_driver.errors()) and self.moving:
@@ -252,6 +289,8 @@ class Robot:
                 self.path = None
                 self.moving = False
         
+
+    # TODO: fix
     def _run_moving(self):
         prev_start = self.path[0][0] if self.path else (self.rx, self.ry)
         last_path = self.path.copy() if self.path else None 
@@ -272,6 +311,10 @@ class Robot:
         
         self.logger.info("Movement finished")
         
+
+    """
+    On websocket message
+    """
     def handle_ws(self, message):
         json_data = json.loads(message)
         
@@ -311,6 +354,10 @@ class Robot:
                 self.logger.info("Incoming request to clear map")
                 self._clearmap()
             
+            
+    """
+    Run all robot`s threads
+    """
     def run_threads(self):
         self.threads = {
             "lidar": threading.Thread(target=self._lidar_thread),
@@ -320,11 +367,16 @@ class Robot:
             "error_check": threading.Thread(target=self._error_check_thread if PROD else lambda: ...),
             "websocket": self.ws.run(),
             "httpd": self.httpd.run(),
+            "cam": self.cam.run(),
+            "cam_obstacle": self.obstacle_detetor.run(),
         }
         
         for t in self.threads.values():
             t.start() 
         
+    """
+    Main function
+    """
     def main(self):
         self.logger.info("Running threads")
         self.run_threads()
@@ -356,27 +408,39 @@ class Robot:
         
         quit(0)
         
+    """
+    Clears map
+    """
     def _clearmap(self):
         del self.map.chunks
         self.map.chunks = self.map._reinit_chunks()
 
-# PROD and init_motors(1, 50)
+
+def main():
+    PROD and init_motors(1, 50)
+    r = Robot(wheel_radius=50, d=150, l=200)
+    r.main()
+
+
+if __name__ == "__main__" and not DEBUG:
+    main()
+    exit(0)
+
+
+# TODO: FOR TEST
+# init_motors(1, 50)
 # r = Robot(wheel_radius=50, d=150, l=200)
-# r.main()
 
-init_motors(1, 50)
-r = Robot(wheel_radius=50, d=150, l=200)
+# ang = np.pi / 6
+# phi = np.pi / 4
+# t = 4
 
-ang = np.pi / 6
-phi = np.pi / 4
-t = 4
-
-q, n = r._calculate_wheels_speed_by_movement(100 * math.cos(ang), 100 * math.sin(ang), phi) * np.array([-1, 1, -1, 1])
+# q, n = r._calculate_wheels_speed_by_movement(100 * math.cos(ang), 100 * math.sin(ang), phi) * np.array([-1, 1, -1, 1])
 # q = r._calculate_wheels_speed_by_movement(100, 0, 0) * np.array([-1, 1, -1, 1]) * 60
 # q = r._calculate_wheels_speed_by_movement(0, 100, 0) * np.array([-1, 1, -1, 1]) * 60
 # q = r._calculate_wheels_speed_by_movement(25*math.sqrt(2), 25*math.sqrt(2), 0) * np.array([-1, 1, -1, 1]) * 60
 
-print(q, sum(q), n)
+# print(q, sum(q), n)
 # r.motor_driver.move(q, t)
 # r.motor_driver.only(70, 1, 0x0c)
-time.sleep(t)
+# time.sleep(t)

@@ -233,7 +233,7 @@ class BaseMultiMotorDriver:
     :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
     :@param motor_sides: list of motor directions (True - default/False - reversed)
     """
-    def __init__(self, motor_addrs: list[int], invert: list[int] = []):
+    def __init__(self, motor_addrs: list[int]):
         self.logger = logging.getLogger("MotorDriver")
         
         self.prevstate = 1
@@ -255,27 +255,45 @@ class BaseMultiMotorDriver:
             time.sleep(0.06)
             
         self.logger.info("Motors initialized")
+        
             
     def move(self, speeds: list[float], m_time: float):
+        """
+        Set movement speed and time to all drivers
+        """
         for i, motor in (reversed(enumerate(self.motors)) if self.prevstate < 0 else enumerate(self.motors)):
             self.logger.info(f"Moving {i}")
-            motor.setSpeed(int(speeds[i]*9.549296585513718/np.pi), MOT_RPM, m_time, MOT_SEC) # convert rad/s to rpm and run motor
+
+            # convert rad/s to rpm and run motor
+            motor.setSpeed(speeds[i]/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
             time.sleep(0.01)
             
         self.prevstate *= -1
         
+
     def only(self, speed: float, m_time: float, addr: int):
+        """
+        Run only one motor
+        """
         for m in self.motors:
             if m.addr == addr:
-                m.setSpeed(int(speed*9.549296585513718/np.pi), MOT_RPM, m_time, MOT_SEC)
+                m.setSpeed(speed/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
                 break
-                
+
+
     def stop(self):
+        """
+        Stop all motors
+        """
         for motor in self.motors:
             motor.stop()
-            time.sleep(0.015)
+            time.sleep(0.01)
     
+
     def errors(self):
+        """
+        Check engine errors
+        """
         result = True
         for motor in self.motors:
             e = motor.getError()
@@ -294,6 +312,7 @@ class BaseMultiMotorDriver:
             time.sleep(0.05)
         
         return result
+
 
 # ! MPU6050
 class MPU6050:
@@ -337,97 +356,3 @@ class MPU6050:
         
         return self.position
     
-
-# if __name__ == "__main__":
-#     init_motors(
-#         bus=1,
-#         wh_radius=28,
-#     )
-    
-#     d = QuadMotorDriver(
-#         motor_addrs=[0x0a, 0x0b, 0x0c, 0x0d],
-#         motor_sides=[False, False, True, True],
-#         motor_alignments=[QuadMotorSide.FWD_LEFT, QuadMotorSide.BWD_LEFT, QuadMotorSide.FWD_RIGHT, QuadMotorSide.BWD_RIGHT],
-#     )
-    
-#     for mot in d.motors:
-#         mot.stop()
-        
-
-        
-    
-#     time.sleep(0.5)
-
-#     while True:
-#         s = input()
-        
-#         if s == "q":
-#             break
-        
-#         elif s == "w":
-#             d.forward(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         elif s == "s":
-#             d.backward(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         elif s == "a":
-#             d.left(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         elif s == "d":
-#             d.right(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         elif s == "e":
-#             d.turn_left(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         elif s == "r":
-#             d.turn_right(6, 1)
-            
-#             time.sleep(0.1)
-            
-#             for i in range(5):
-#                 d.errors()
-                
-#             d.stop()
-#             time.sleep(0.1)
-        
-#         print("Done")
