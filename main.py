@@ -12,7 +12,7 @@ import json
 
 from src.cam.source import R_Cam, R_ObstacleDetectorHandler
 from src.lidar_module.source import Lidar
-from src.i2c_data.source import BaseMultiMotorDriver, MPU6050, init_motors
+from src.i2c_data.source import BaseMultiMotorDriver, init_motors
 from src.map.source import Map
 from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
@@ -367,8 +367,8 @@ class Robot:
             "error_check": threading.Thread(target=self._error_check_thread if PROD else lambda: ...),
             "websocket": self.ws.run(),
             "httpd": self.httpd.run(),
-            "cam": self.cam.run(),
-            "cam_obstacle": self.obstacle_detetor.run(),
+            # "cam": self.cam.run(),
+            # "cam_obstacle": self.obstacle_detetor.run(),
         }
         
         for t in self.threads.values():

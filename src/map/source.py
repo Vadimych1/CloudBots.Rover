@@ -18,7 +18,7 @@ class Map:
     
     def _reinit_chunks(self):
         return {
-            (cx, cy): Chunk(cx, cy) for cx in range(-2, 2) for cy in range(-2, 2)
+            (cx, cy): Chunk(cx, cy) for cx in range(-2, 3) for cy in range(-2, 3)
         }
         # return {}
     
@@ -38,8 +38,8 @@ class Map:
             # print(self.chunks[(chunk_x, chunk_y)])
             # print(self.chunks[(chunk_x, chunk_y)].data)
 
-        self.chunks[(chunk_x, chunk_y)].data[int(x % 1000)][int(y % 1000)] = 255
-    
+        self.chunks[(chunk_x, chunk_y)].data[x % 1000][y % 1000] = 255
+
     def create_path(self, x1, y1, x2, y2):
         self.logger.info(f"Finding path from {x1, y1} to {x2, y2}")
         
@@ -268,23 +268,30 @@ class Map:
         for (x, y), chunk in self.chunks.copy().items():
             data = Image.fromarray(chunk.data)
             data = data.resize((per_chunk_x, per_chunk_y))
+
             img.paste(data, (
-                int(per_chunk_x * (x - min_chunk_x)), 
-                int(per_chunk_y * (y - min_chunk_y)), 
-                int(per_chunk_x * (x - min_chunk_x + 1)), 
-                int(per_chunk_y * (y - min_chunk_y + 1))
+                int(per_chunk_x * (y - min_chunk_y)), 
+                int(per_chunk_y * (x - min_chunk_x)), 
+                int(per_chunk_x * (y - min_chunk_y + 1)), 
+                int(per_chunk_y * (x - min_chunk_x + 1))
             ))
 
         output = BytesIO()
-        
-        img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
-        img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    
+        img = img.transpose(Image.FLIP_TOP_BOTTOM)
+        img = img.transpose(Image.FLIP_LEFT_RIGHT)
         
         draw = ImageDraw.ImageDraw(img)
-        draw.circle(((rx / 1000 - min_chunk_x) * per_chunk_x, (ry / 1000 - min_chunk_y) * per_chunk_y), 20, "red", "green")
+
+        dx = (rx / 1000 - min_chunk_x) * per_chunk_x
+        dy = (ry / 1000 - min_chunk_y) * per_chunk_y
+        
+        draw.rectangle((dx - 10, dy - 10, dx + 10, dy + 10), "green")
         
         if tx and ty:
-            draw.circle(((tx / 1000 - min_chunk_x) * per_chunk_x, (ty / 1000 - min_chunk_y) * per_chunk_y), 10, "green", "red")
+            dx = (tx / 1000 - min_chunk_x) * per_chunk_x
+            dy = (ty / 1000 - min_chunk_y) * per_chunk_y
+            draw.rectangle((dx-10, dy-10, dx+10, dy+10), fill = "red")
         
         if path:
             offs_x, offs_y = self.path_offset

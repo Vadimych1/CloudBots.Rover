@@ -1,0 +1,21 @@
+13:01:03 [INFO] Main: Running threads
+13:01:03 [INFO] WebSocket: Started WebSocket server on :1026
+13:01:03 [INFO] HTTPServer: Started HTTP server on :1025
+13:01:03 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+13:01:03 [INFO] rplidar: Starting motor
+13:01:03 [INFO] rplidar: starting scan process in normal mode
+13:01:03 [INFO] Main: Started main. Type `quit` to exit.
+13:01:03 [INFO] rplidar: Stopping scanning
+13:01:03 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+13:01:03 [INFO] rplidar: Starting motor
+13:01:03 [INFO] rplidar: starting scan process in normal mode
+13:01:05 [INFO] Map[./chunks]: Creating chunk at 2 3
+13:01:05 [INFO] Map[./chunks]: Creating chunk at 0 3
+13:01:10 [INFO] websockets.server: connection open
+13:01:12 [INFO] Map[./chunks]: Creating chunk at -1 4
+13:01:12 [INFO] websockets.server: connection open
+13:01:18 [INFO] rplidar: Stopping scanning
+13:01:18 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+13:01:18 [INFO] rplidar: Starting motor
+13:01:18 [INFO] rplidar: starting scan process in normal mode
+13:01:25 [INFO] Map[./chunks]: Creating chunk at -1 3

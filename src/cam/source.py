@@ -210,8 +210,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         blur = cv.GaussianBlur(masked, (alpha, alpha), 10, borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
         canny = cv.Canny(blur, canny_A, canny_B) # get object borders by Canny
 
-        cv.imshow("blur", blur)
-        cv.imshow("canny", canny)
+        # cv.imshow("blur", bls
 
         circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
         lines = cv.HoughLinesP(canny, 1, np.pi/180, 80, None, 0, 10) # detect lines by Hough
@@ -219,7 +218,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         # get only vertical lines that start above `percent_height`
         result = []
         if type(lines) != type(None):
-            print("L", lines)
+            # print("L", lines)
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 if max(y1, y2) > f.shape[0] - self.MAX_BOTTOM_PADDING and abs(y1 - y2) > self.MIN_LENGTH and abs(x1 - x2) < self.MAX_X_DELTA:
@@ -229,7 +228,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
 
 
         if type(circles) != type(None):
-            print("C", circles)
+            # print("C", circles)
             for circle in circles:
                 cx, cy, _ = circle[0]
                 if cy > f.shape[0] - self.MAX_BOTTOM_PADDING:
@@ -252,17 +251,17 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
             return None
 
 
-d = R_ObstacleDetectorHandler()
+# d = R_ObstacleDetectorHandler()
 
-cap = cv.VideoCapture(0)
-while True:
-    ret, frame = cap.read()
+# cap = cv.VideoCapture(0)
+# while True:
+#     ret, frame = cap.read()
 
-    result = d.process(frame)
+#     result = d.process(frame)
 
-    print(result)
+#     print(result)
 
-    if cv.waitKey(1) == ord('q'):
-        break
+#     if cv.waitKey(1) == ord('q'):
+#         break
 
-cap.release()
+# cap.release()

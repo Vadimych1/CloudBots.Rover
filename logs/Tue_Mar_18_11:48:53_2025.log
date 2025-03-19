@@ -1,0 +1,66 @@
+11:48:54 [INFO] Main: Running threads
+11:48:54 [INFO] WebSocket: Started WebSocket server on :1026
+11:48:54 [INFO] HTTPServer: Started HTTP server on :1025
+11:48:54 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:48:54 [INFO] rplidar: Starting motor
+11:48:54 [INFO] rplidar: starting scan process in normal mode
+11:48:54 [INFO] rplidar: Stopping scanning
+11:48:54 [INFO] Main: Started main. Type `quit` to exit.
+11:48:54 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:48:54 [INFO] rplidar: Starting motor
+11:48:54 [INFO] rplidar: starting scan process in normal mode
+11:48:55 [INFO] Map[./chunks]: Creating chunk at 0 -3
+11:48:55 [INFO] Map[./chunks]: Creating chunk at 1 -3
+11:48:55 [INFO] Map[./chunks]: Creating chunk at 3 0
+11:48:55 [INFO] Map[./chunks]: Creating chunk at -1 -3
+11:48:56 [INFO] Map[./chunks]: Creating chunk at 2 -2
+11:49:07 [INFO] websockets.server: connection open
+11:49:07 [ERROR] WebSocket: module 'PIL.Image' has no attribute 'Transpose'
+Traceback (most recent call last):
+  File "/home/qefy/Desktop/vadimych1/src/web/websocket.py", line 16, in process
+    responce = self.on_message(data)
+  File "/home/qefy/Desktop/vadimych1/main.py", line 340, in handle_ws
+    render = self.map.render(self.rx, self.ry, self.path, *(self.target if self.target else (None, None)))
+  File "/home/qefy/Desktop/vadimych1/src/map/source.py", line 280, in render
+    img = img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+  File "/home/qefy/Desktop/vadimych1/venv/lib/python3.10/site-packages/PIL/Image.py", line 77, in __getattr__
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+AttributeError: module 'PIL.Image' has no attribute 'Transpose'
+11:49:08 [INFO] rplidar: Stopping scanning
+11:49:08 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:49:08 [INFO] rplidar: Starting motor
+11:49:08 [INFO] rplidar: starting scan process in normal mode
+11:49:13 [INFO] Map[./chunks]: Creating chunk at -3 -1
+11:49:14 [INFO] Map[./chunks]: Creating chunk at 2 1
+11:49:23 [INFO] rplidar: Stopping scanning
+11:49:23 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:49:23 [INFO] rplidar: Starting motor
+11:49:23 [INFO] rplidar: starting scan process in normal mode
+11:49:28 [INFO] Map[./chunks]: Creating chunk at 4 1
+11:49:29 [INFO] Map[./chunks]: Creating chunk at 3 1
+11:49:38 [INFO] rplidar: Stopping scanning
+11:49:38 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:49:38 [INFO] rplidar: Starting motor
+11:49:38 [INFO] rplidar: starting scan process in normal mode
+11:49:44 [INFO] Map[./chunks]: Creating chunk at 2 -3
+11:49:44 [INFO] Map[./chunks]: Creating chunk at 3 -2
+11:49:53 [INFO] rplidar: Stopping scanning
+11:49:53 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:49:53 [INFO] rplidar: Starting motor
+11:49:53 [INFO] rplidar: starting scan process in normal mode
+11:50:07 [INFO] rplidar: Stopping scanning
+11:50:07 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:50:07 [INFO] rplidar: Starting motor
+11:50:07 [INFO] rplidar: starting scan process in normal mode
+11:50:22 [INFO] rplidar: Stopping scanning
+11:50:22 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:50:22 [INFO] rplidar: Starting motor
+11:50:22 [INFO] rplidar: starting scan process in normal mode
+11:50:37 [INFO] rplidar: Stopping scanning
+11:50:37 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:50:37 [INFO] rplidar: Starting motor
+11:50:37 [INFO] rplidar: starting scan process in normal mode
+11:50:52 [INFO] rplidar: Stopping scanning
+11:50:52 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:50:52 [INFO] rplidar: Starting motor
+11:50:52 [INFO] rplidar: starting scan process in normal mode

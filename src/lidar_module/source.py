@@ -101,3 +101,10 @@ class Lidar:
         self.lidar.stop_motor()
         self.lidar.stop()
 
+
+if __name__ == "__main__":
+    l = Lidar()
+    l.stop()
+
+    while True:
+        time.sleep(1)

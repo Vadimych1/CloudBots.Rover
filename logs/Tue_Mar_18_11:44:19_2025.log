@@ -1,0 +1,91 @@
+11:44:19 [INFO] Main: Running threads
+11:44:19 [INFO] WebSocket: Started WebSocket server on :1026
+11:44:19 [INFO] HTTPServer: Started HTTP server on :1025
+11:44:19 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:44:19 [INFO] rplidar: Starting motor
+11:44:19 [INFO] rplidar: starting scan process in normal mode
+11:44:19 [INFO] rplidar: Stopping scanning
+11:44:19 [INFO] Main: Started main. Type `quit` to exit.
+11:44:19 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:44:19 [INFO] rplidar: Starting motor
+11:44:19 [INFO] rplidar: starting scan process in normal mode
+11:44:21 [INFO] Map[./chunks]: Creating chunk at -3 0
+11:44:21 [INFO] Map[./chunks]: Creating chunk at -3 -1
+11:44:21 [INFO] Map[./chunks]: Creating chunk at -3 -2
+11:44:21 [INFO] Map[./chunks]: Creating chunk at -1 -5
+11:44:21 [INFO] Map[./chunks]: Creating chunk at -2 -4
+11:44:22 [INFO] Map[./chunks]: Creating chunk at 2 -2
+11:44:30 [INFO] Map[./chunks]: Creating chunk at 2 -4
+11:44:35 [INFO] rplidar: Stopping scanning
+11:44:35 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:44:35 [INFO] rplidar: Starting motor
+11:44:35 [INFO] rplidar: starting scan process in normal mode
+11:44:39 [INFO] Map[./chunks]: Creating chunk at -2 -3
+11:44:43 [INFO] Map[./chunks]: Creating chunk at -3 -3
+11:44:43 [INFO] Map[./chunks]: Creating chunk at -3 1
+11:44:43 [INFO] Map[./chunks]: Creating chunk at -3 -4
+11:44:43 [INFO] Map[./chunks]: Creating chunk at -1 -4
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -1 -3
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -1 2
+11:44:44 [INFO] Map[./chunks]: Creating chunk at 0 2
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -4 -2
+11:44:44 [INFO] Map[./chunks]: Creating chunk at 2 0
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -2 2
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -5 0
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -4 0
+11:44:44 [INFO] Map[./chunks]: Creating chunk at 2 -1
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -4 1
+11:44:44 [INFO] Map[./chunks]: Creating chunk at -4 -1
+11:44:46 [INFO] Map[./chunks]: Creating chunk at -4 2
+11:44:46 [INFO] Map[./chunks]: Creating chunk at 1 2
+11:44:48 [INFO] Map[./chunks]: Creating chunk at -3 2
+11:44:56 [INFO] rplidar: Stopping scanning
+11:44:56 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:44:56 [INFO] rplidar: Starting motor
+11:44:56 [INFO] rplidar: starting scan process in normal mode
+11:45:08 [INFO] Map[./chunks]: Creating chunk at 0 3
+11:45:09 [INFO] Map[./chunks]: Creating chunk at -2 3
+11:45:09 [INFO] Map[./chunks]: Creating chunk at -3 3
+11:45:09 [INFO] Map[./chunks]: Creating chunk at 2 2
+11:45:09 [INFO] Map[./chunks]: Creating chunk at -1 3
+11:45:09 [INFO] Map[./chunks]: Creating chunk at 2 1
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 0 4
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 1 -3
+11:45:10 [INFO] Map[./chunks]: Creating chunk at -1 4
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 0 -3
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 2 3
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 2 4
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 3 1
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 3 2
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 3 3
+11:45:10 [INFO] Map[./chunks]: Creating chunk at 1 3
+11:45:11 [INFO] Map[./chunks]: Creating chunk at 3 0
+11:45:11 [INFO] Map[./chunks]: Creating chunk at 3 -1
+11:45:11 [INFO] Map[./chunks]: Creating chunk at 4 1
+11:45:11 [INFO] Map[./chunks]: Creating chunk at 4 0
+11:45:17 [INFO] rplidar: Stopping scanning
+11:45:18 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:45:18 [INFO] rplidar: Starting motor
+11:45:18 [INFO] rplidar: starting scan process in normal mode
+11:45:41 [INFO] rplidar: Stopping scanning
+11:45:41 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:45:41 [INFO] rplidar: Starting motor
+11:45:41 [INFO] rplidar: starting scan process in normal mode
+11:45:59 [INFO] Map[./chunks]: Creating chunk at 3 -2
+11:46:02 [INFO] Map[./chunks]: Creating chunk at 3 -3
+11:46:06 [INFO] rplidar: Stopping scanning
+11:46:06 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:46:06 [INFO] rplidar: Starting motor
+11:46:06 [INFO] rplidar: starting scan process in normal mode
+11:46:32 [INFO] rplidar: Stopping scanning
+11:46:32 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:46:32 [INFO] rplidar: Starting motor
+11:46:32 [INFO] rplidar: starting scan process in normal mode
+11:46:57 [INFO] rplidar: Stopping scanning
+11:46:57 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:46:57 [INFO] rplidar: Starting motor
+11:46:57 [INFO] rplidar: starting scan process in normal mode
+11:47:20 [INFO] rplidar: Stopping scanning
+11:47:20 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+11:47:20 [INFO] rplidar: Starting motor
+11:47:20 [INFO] rplidar: starting scan process in normal mode
