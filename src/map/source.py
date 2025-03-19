@@ -9,20 +9,43 @@ import logging
 import cv2
 import time
 import heapq
+from pathlib import Path
 
 class Map:
-    def __init__(self, path = "./chunks"):
+    """
+    Map class.
+
+    Implements all map methods: pathfinding, creating/loading/saving chunks, constructing map
+
+    :param path: chunks save path
+    :type path: str
+    """
+    def __init__(self, path: Path = "./chunks") -> None:
         self.logger = logging.getLogger(f"Map[{path}]")
         self.chunks = self._reinit_chunks()
         self.path = path
     
-    def _reinit_chunks(self):
+    def _reinit_chunks(self) -> dict[tuple[int, int], "Chunk"]:
+        """
+        Returns defaultly initialized chunks
+
+        :return: newly initialized chunks
+        :rtype: dict[tuple[x, y], "Chunk"]
+        """
         return {
             (cx, cy): Chunk(cx, cy) for cx in range(-2, 2) for cy in range(-2, 2)
         }
-        # return {}
     
-    def add_point(self, x, y):
+    def add_point(self, x: int, y: int) -> None:
+        """
+        Adds point to map
+
+        :param x: point x
+        :type x: int
+
+        :param y: point y
+        :type y: int
+        """
         x /= 2
         y /= 2
         
@@ -35,16 +58,31 @@ class Map:
         if (chunk_x, chunk_y) not in self.chunks:
             self.logger.info(f"Creating chunk at {chunk_x} {chunk_y}")
             self.chunks[(chunk_x, chunk_y)] = Chunk.load(chunk_x, chunk_y, self.path)
-            # print(self.chunks[(chunk_x, chunk_y)])
-            # print(self.chunks[(chunk_x, chunk_y)].data)
 
         self.chunks[(chunk_x, chunk_y)].data[int(x % 1000)][int(y % 1000)] = 255
     
-    def create_path(self, x1, y1, x2, y2):
+    def create_path(self, x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int, int, int]]:
+        """
+        Find path from (x1, y1) to (x2, y2) on the current map
+
+        :param x1: start dot x coordinate
+        :type x1: int
+        
+        :param y1: start dot y coordinate
+        :type y1: int
+        
+        :param x2: end dot x coordinate
+        :type x2: int
+        
+        :param y2: end dot y coordinate
+        :type y2: int
+
+        :return: a path represented as sequence of lines
+        :rtype: list[tuple[x1, y1, x2, y2]]
+        """
+
         self.logger.info(f"Finding path from {x1, y1} to {x2, y2}")
-        
         path = self._find_path(x1, y1, x2, y2)
-        
         self.logger.info(f"Path found! Processing {len(path) if path else 0} nodes")
         
         lines = []
@@ -71,7 +109,6 @@ class Map:
             prev = x
 
         lines.append((current_line[0], current_line[-1]))
-        
         
         return lines
     
@@ -114,8 +151,8 @@ class Map:
         
         self.path_offset = (x_offs, y_offs) 
         
-        # return self._bfs(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
-        return self._astar(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))            
+        # return self._bfs(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs)) # deprecated (too slow)
+        return self._astar(constructed_map, (x1 - x_offs, y1 - y_offs), (x2 - x_offs, y2 - y_offs))
     
     # PATHFINDING ALGOS
     def _bfs(self, data, start, end):
@@ -230,6 +267,9 @@ class Map:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
         
     def _load_path_chunks(self, start_chunk, end_chunk):
+        """
+        Loads all chunks that probably can be on path from start_chunk to end_chunk
+        """
         chunks_to_load = {start_chunk, end_chunk}
         dx = end_chunk[0] - start_chunk[0]
         dy = end_chunk[1] - start_chunk[1]
@@ -245,6 +285,10 @@ class Map:
             
             
     def render(self, rx, ry, path, tx, ty):
+        """
+        Render map image
+        """
+
         while "chunks" not in self.__dict__.keys():
             time.sleep(0.01)
             self.logger.info("Waiting for chunks")
@@ -296,9 +340,11 @@ class Map:
         
         return "data:image/png;base64," + base64.b64encode(output.getvalue()).decode('ascii')
     
+    # TODO: check is it needed or not
     def haf_update_chunks(self):
-        for chunk in self.chunks.copy().values():
-            chunk.update_by_haf()
+        ...
+        # for chunk in self.chunks.copy().values():
+            # chunk.update_by_haf()
     
     def __del__(self):
         self.logger.info("Saving chunks")
@@ -311,14 +357,14 @@ class Chunk:
         self.d_y = y
         self.data = data if data else np.zeros((1000, 1000), np.uint8)
     
-    def update_by_haf(self):
-        lines = cv2.HoughLinesP(self.data, 1, np.pi / 130, 100, minLineLength=10, maxLineGap=40)
-        if lines is None:
-            return
+    # def update_by_haf(self):
+    #     lines = cv2.HoughLinesP(self.data, 1, np.pi / 130, 100, minLineLength=10, maxLineGap=40)
+    #     if lines is None:
+    #         return
         
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(self.data, (x1, y1), (x2, y2), 255, 1)
+    #     for line in lines:
+    #         x1, y1, x2, y2 = line[0]
+    #         cv2.line(self.data, (x1, y1), (x2, y2), 255, 1)
     
     def save(self, path = "./chunks"):
         open(os.path.join(path, f"{self.d_x}_{self.d_y}.chunk"), "wb").write(self.data.flatten().tobytes(order='C'))
@@ -330,6 +376,3 @@ class Chunk:
         except:
             return Chunk(d_x, d_y)
     
-
-# m = Map()
-# print(m.create_path(0, 0, 10, 10))

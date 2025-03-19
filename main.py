@@ -2,7 +2,6 @@ import dotenv
 import logging
 import time
 import sys, os
-import math
 import numpy as np
 from collections import deque
 import logging
@@ -12,7 +11,7 @@ import json
 
 from src.cam.source import R_Cam, R_ObstacleDetectorHandler
 from src.lidar_module.source import Lidar
-from src.i2c_data.source import BaseMultiMotorDriver, MPU6050, init_motors
+from src.i2c_data.source import BaseMultiMotorDriver, init_motors
 from src.map.source import Map
 from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
@@ -72,7 +71,6 @@ class Robot:
             # 0x0d - bwd_right
             
             self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0c, 0x0b, 0x0d]) # motor driver
-            self.mpu = MPU6050() # mpu6050 driver
         
         self.lidar = Lidar(lidar_port) # lidar driver
         self.map = Map() # map
@@ -196,29 +194,23 @@ class Robot:
     Thread for lidar data calculation
     """
     def _lidar_thread(self):
-        for res in self.lidar.scan():
-            angle, distance = res
-            angle += self.phi
-            
-            x = self.rx + distance * math.cos(np.radians(angle))
-            y = self.ry + distance * math.sin(np.radians(angle))
-            
+        for (x, y) in self.lidar.scan():            
             self.map.add_point(x, y)
-            
             if not self._running:
                 break
 
 
-    """
-    Thread for MPU data calculation
-    """
-    def _mpu_thread(self):
-        tick = time.time()
-        while self._running:
-            t = time.time()
-            self.mpu.integrate_tick(t - tick)
-            tick = t
-            time.sleep(0.05)
+    # deprecated
+    # """
+    # Thread for MPU data calculation
+    # """
+    # def _mpu_thread(self):
+    #     tick = time.time()
+    #     while self._running:
+    #         t = time.time()
+    #         self.mpu.integrate_tick(t - tick)
+    #         tick = t
+    #         time.sleep(0.05)
         
     """
     Thread for handling movement
@@ -290,7 +282,6 @@ class Robot:
                 self.moving = False
         
 
-    # TODO: fix
     def _run_moving(self):
         prev_start = self.path[0][0] if self.path else (self.rx, self.ry)
         last_path = self.path.copy() if self.path else None 
@@ -356,7 +347,7 @@ class Robot:
             
             
     """
-    Run all robot`s threads
+    Run all robot threads
     """
     def run_threads(self):
         self.threads = {
@@ -374,6 +365,7 @@ class Robot:
         for t in self.threads.values():
             t.start() 
         
+
     """
     Main function
     """

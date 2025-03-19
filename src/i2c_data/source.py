@@ -1,9 +1,9 @@
 import time
-from enum import Enum
+# from enum import Enum
 from ctypes import *
 import numpy as np
-import quaternion as quat
-import mpu6050 as mpu
+# import quaternion as quat
+# import mpu6050 as mpu
 import logging
 import platform
 
@@ -233,7 +233,7 @@ class BaseMultiMotorDriver:
     :@param motor_addrs: list of motor addresses (like 0x0a, 0x0b etc.)
     :@param motor_sides: list of motor directions (True - default/False - reversed)
     """
-    def __init__(self, motor_addrs: list[int]):
+    def __init__(self, motor_addrs: list[int]) -> None:
         self.logger = logging.getLogger("MotorDriver")
         
         self.prevstate = 1
@@ -257,12 +257,19 @@ class BaseMultiMotorDriver:
         self.logger.info("Motors initialized")
         
             
-    def move(self, speeds: list[float], m_time: float):
+    def move(self, speeds: list[float], m_time: float) -> None:
         """
         Set movement speed and time to all drivers
+
+        :param speeds: speeds of every motor
+        :type speeds: list[float]
+
+        :param m_time: movement time. Specify -1 for non-stop moving
+        :type m_time: float
         """
-        for i, motor in (reversed(enumerate(self.motors)) if self.prevstate < 0 else enumerate(self.motors)):
-            self.logger.info(f"Moving {i}")
+
+        for i, motor in enumerate(self.motors[::self.prevstate]):
+            self.logger.debug(f"Moving {i}")
 
             # convert rad/s to rpm and run motor
             motor.setSpeed(speeds[i]/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
@@ -271,17 +278,24 @@ class BaseMultiMotorDriver:
         self.prevstate *= -1
         
 
-    def only(self, speed: float, m_time: float, addr: int):
+    def only(self, speed: float, m_time: float, addr: int) -> None:
         """
         Run only one motor
+        
+        :param speeds: speeds of every motor
+        :type speeds: list[float]
+
+        :param m_time: movement time. Specify -1 for non-stop moving
+        :type m_time: float
         """
+
         for m in self.motors:
             if m.addr == addr:
                 m.setSpeed(speed/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
                 break
 
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop all motors
         """
@@ -290,10 +304,14 @@ class BaseMultiMotorDriver:
             time.sleep(0.01)
     
 
-    def errors(self):
+    def errors(self) -> None:
         """
         Check engine errors
+
+        :return: True if no errors was detected, else False
+        :rtype: bool
         """
+
         result = True
         for motor in self.motors:
             e = motor.getError()
@@ -301,58 +319,58 @@ class BaseMultiMotorDriver:
                 if e == MOT_ERR_DRV:
                     result = False
                     
-                    self.logger.error(f"{hex(motor.addr)} ERR_DRV")
-                    time.sleep(0.01) # delay to not interrupt anything
+                    self.logger.error(f"{hex(motor.addr)} :: ERR_DRV")
+                    time.sleep(0.008) # delay to not interrupt anything
                     
                     self.stop()
                     break
                 else:
-                    self.logger.error(f"{hex(motor.addr)} ERR_SPD")
+                    self.logger.error(f"{hex(motor.addr)} :: ERR_SPD")
             
             time.sleep(0.05)
         
         return result
 
 
-# ! MPU6050
-class MPU6050:
-    def __init__(self, addr: int = None):
-        self.addr = addr
-        self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
+# deprecated
+# class MPU6050:
+#     def __init__(self, addr: int = None):
+#         self.addr = addr
+#         self.sensor = mpu.mpu6050(self.addr or 0x68, bus=1)
         
-        self.rotation_speed = 0
-        self.rotation = 0
+#         self.rotation_speed = 0
+#         self.rotation = 0
 
-        self.speed = np.array([0, 0, 0])
-        self.position = np.array([0, 0, 0])
+#         self.speed = np.array([0, 0, 0])
+#         self.position = np.array([0, 0, 0])
         
-        self.e = np.array([0, 1, 0])
+#         self.e = np.array([0, 1, 0])
 
-    def accelerometer(self):
-        return self.sensor.get_accel_data()
+#     def accelerometer(self):
+#         return self.sensor.get_accel_data()
         
-    def gyroscope(self):
-        return self.sensor.get_gyro_data()
+#     def gyroscope(self):
+#         return self.sensor.get_gyro_data()
         
-    def temperature(self):
-        return self.sensor.get_temp()
+#     def temperature(self):
+#         return self.sensor.get_temp()
         
-    def integrate_tick(self, delta_time = 1) -> np.ndarray:
-        self.rotation_speed += self.gyroscope() * delta_time
-        self.rotation += self.rotation_speed * delta_time
+#     def integrate_tick(self, delta_time = 1) -> np.ndarray:
+#         self.rotation_speed += self.gyroscope() * delta_time
+#         self.rotation += self.rotation_speed * delta_time
     
-        r = self.rotation
-        A = self.accelerometer()
-        axis_angle = (r * 0.5) * self.e / np.linalg.norm(self.e)
+#         r = self.rotation
+#         A = self.accelerometer()
+#         axis_angle = (r * 0.5) * self.e / np.linalg.norm(self.e)
         
-        vec = quat.quaternion(0, *A)
-        qlog = quat.quaternion(0, *axis_angle)   
-        q = np.exp(qlog)
-        A2 = q * vec * np.conjugate(q)
-        A2 = A2.imag
+#         vec = quat.quaternion(0, *A)
+#         qlog = quat.quaternion(0, *axis_angle)   
+#         q = np.exp(qlog)
+#         A2 = q * vec * np.conjugate(q)
+#         A2 = A2.imag
         
-        self.speed += A2 * delta_time
-        self.position += self.speed * delta_time
+#         self.speed += A2 * delta_time
+#         self.position += self.speed * delta_time
         
-        return self.position
+#         return self.position
     

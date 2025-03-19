@@ -72,11 +72,23 @@ class R_Cam:
         self.thread = None
 
 
-    def add_handler(self, handler: Callable[[MatLike], None] | R_BaseCamHandler):
+    def add_handler(self, handler: Callable[[MatLike], None] | R_BaseCamHandler) -> None:
+        """
+        Adds frame handler to camera
+
+        :param handler: function or R_BaseCamHandler instance
+        :type handler: Callable[[MatLike], None] | R_BaseCamHandler
+        """
         self.handlers.append(handler)
 
 
-    def _frame(self, frame: MatLike):
+    def _frame(self, frame: MatLike) -> None:
+        """
+        Handle frame
+
+        :param frame: incoming frame
+        :type frame: MatLike
+        """
         for h in self.handlers:
             try:
                 h(frame)
@@ -88,6 +100,9 @@ class R_Cam:
     def run(self) -> threading.Thread:
         """
         Returns thread with mainloop
+
+        :return: thread to start
+        :rtype: Thread
         """
         self.running = True
         self.thread = threading.Thread(target=self._thread)
@@ -95,14 +110,17 @@ class R_Cam:
         return self.thread
 
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the camera frame stream
         """
         self.running = False
 
 
-    def _thread(self):
+    def _thread(self) -> None:
+        """
+        Mainloop function
+        """
         while self.cap.isOpened() and self.running:
             ret, frame = self.cap.read()
             
@@ -114,6 +132,7 @@ class ObstacleSide(Enum):
     """
     Represents the alignment of detected obstacle
     """
+
     LEFT = 0
     RIGHT = 1
     CENTER = 2
@@ -187,7 +206,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         return dominant
 
 
-    def process(self, f: MatLike, threshold: int = 25, alpha: int = 5, canny_A: int = 200, canny_B: int = 200, percent_height: float = 2/3) -> ObstacleSide:
+    def process(self, f: MatLike, threshold: int = 25, alpha: int = 7, canny_A: int = 200, canny_B: int = 250, percent_height: float = 2/3) -> ObstacleSide | None:
         """
         Processes input image to detect obstacles
 
@@ -204,39 +223,27 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         :rtype: ObstacleSide | None
         """
 
+
         f = f[int(f.shape[0]*(1-percent_height)):f.shape[0]] # process only percent_height of image (from bottom)
         dominant = R_ObstacleDetectorHandler.get_dominant(f) # get the dominant color of image (the mostly seen)
         masked = cv.inRange(f, dominant - threshold, dominant + threshold) # apply mask by dominant color
         blur = cv.GaussianBlur(masked, (alpha, alpha), 10, borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
         canny = cv.Canny(blur, canny_A, canny_B) # get object borders by Canny
 
-        cv.imshow("blur", blur)
-        cv.imshow("canny", canny)
 
-        circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
+        # circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
         lines = cv.HoughLinesP(canny, 1, np.pi/180, 80, None, 0, 10) # detect lines by Hough
+
 
         # get only vertical lines that start above `percent_height`
         result = []
         if type(lines) != type(None):
-            print("L", lines)
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 if max(y1, y2) > f.shape[0] - self.MAX_BOTTOM_PADDING and abs(y1 - y2) > self.MIN_LENGTH and abs(x1 - x2) < self.MAX_X_DELTA:
                     result.append((x1 + x2) / 2)
         else:
             return None
-
-
-        if type(circles) != type(None):
-            print("C", circles)
-            for circle in circles:
-                cx, cy, _ = circle[0]
-                if cy > f.shape[0] - self.MAX_BOTTOM_PADDING:
-                    result.append(cx)
-        else:
-            return None
-
 
         # select obstacle side
         if len(result) > 0:
@@ -247,22 +254,39 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
             elif mid < f.shape[1] / 3 * 2:
                 return ObstacleSide.CENTER
             else:
-                return ObstacleSide.LEFT
+                return ObstacleSide.RIGHT
         else:
             return None
 
 
-d = R_ObstacleDetectorHandler()
+if __name__ == "__main__":
+    d = R_ObstacleDetectorHandler()
 
-cap = cv.VideoCapture(0)
-while True:
-    ret, frame = cap.read()
+    cap = cv.VideoCapture(0)
+    try:
+        while True:
+            ret, frame = cap.read()
 
-    result = d.process(frame)
+            result = d.process(frame)
 
-    print(result)
+            frame = cv.putText(frame, f"{result}", (40, 40), cv.FONT_HERSHEY_PLAIN, 1, (255, 0, 255), 1)
 
-    if cv.waitKey(1) == ord('q'):
-        break
+            match result:
+                case ObstacleSide.LEFT:
+                    frame = cv.putText(frame, "|>", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
 
-cap.release()
+                case ObstacleSide.RIGHT:
+                    frame = cv.putText(frame, "<|", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
+
+                case ObstacleSide.CENTER:
+                    frame = cv.putText(frame, "|<|", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
+            
+            cv.imshow("fr", frame)
+
+            if cv.waitKey(1) == ord('q'):
+                break
+
+    except Exception as e:
+        print("E", e)
+
+    cap.release()
