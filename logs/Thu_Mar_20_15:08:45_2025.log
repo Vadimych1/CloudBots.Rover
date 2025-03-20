@@ -1,0 +1,20 @@
+15:08:45 [INFO] Main: Running threads
+15:08:45 [INFO] WebSocket: Started WebSocket server on :1026
+15:08:45 [INFO] HTTPServer: Started HTTP server on :1025
+15:08:45 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+15:08:45 [INFO] rplidar: Starting motor
+15:08:45 [INFO] rplidar: starting scan process in normal mode
+15:08:45 [INFO] Main: Started main. Type `quit` to exit.
+15:08:46 [ERROR] Lidar[/dev/ttyUSB0]: Wrong/insufficient arguments passed to Scan.update(): lidar must be a list
+Traceback (most recent call last):
+  File "/home/qefy/Desktop/vadimych1/src/lidar_module/source.py", line 66, in scan
+    self.slam.update(distances, scan_angles_degrees=angles)
+  File "/home/qefy/Desktop/vadimych1/venv/lib/python3.10/site-packages/BreezySLAM-0.1-py3.10-linux-aarch64.egg/breezyslam/algorithms.py", line 259, in update
+    CoreSLAM.update(self, scans_mm, pose_change, scan_angles_degrees, should_update_map)
+  File "/home/qefy/Desktop/vadimych1/venv/lib/python3.10/site-packages/BreezySLAM-0.1-py3.10-linux-aarch64.egg/breezyslam/algorithms.py", line 106, in update
+    self._scan_update(self.scan_for_mapbuild, scans_mm, velocities, scan_angles_degrees)
+  File "/home/qefy/Desktop/vadimych1/venv/lib/python3.10/site-packages/BreezySLAM-0.1-py3.10-linux-aarch64.egg/breezyslam/algorithms.py", line 139, in _scan_update
+    scan.update(scans_mm=scans_distances_mm, hole_width_mm=self.hole_width_mm,
+TypeError: Wrong/insufficient arguments passed to Scan.update(): lidar must be a list
+15:08:46 [INFO] Lidar[/dev/ttyUSB0]: Scan started
+15:08:46 [INFO] rplidar: Starting motor

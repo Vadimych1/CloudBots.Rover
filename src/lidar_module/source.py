@@ -62,9 +62,11 @@ class Lidar:
 
                     if len(scans) == 250:
                         distances, angles = zip(*scans)
+                        distances = list(distances)
+                        angles = list(angles)
 
                         self.slam.update(distances, scan_angles_degrees=angles)
-                        self.slam.get_map(self.map_bytes)
+                        self.slam.getmap(self.map_bytes)
                         self.pos = self.slam.getpos()
 
                         scans = []
@@ -86,6 +88,8 @@ class Lidar:
     def _astar(self, data, start, end):
         def get(x, y):
             return data[x * self.size + y]
+        
+        print(max(data), min(data))
         
         directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
         
@@ -126,7 +130,7 @@ class Lidar:
                 neighbor = (current[0] + direction[0], current[1] + direction[1])
 
                 # Проверяем границы карты и проходимость
-                if (0 <= neighbor[0] < self.size) and (0 <= neighbor[1] < self.size) and (get(neighbor[0], neighbor[1]) <= 0x7f): #TODO: change 0
+                if (0 <= neighbor[0] < self.size) and (0 <= neighbor[1] < self.size) and (get(neighbor[0], neighbor[1]) >= 0x7f): #TODO: change 0
                     tentative_g_score = g_score[current] + 1  # Предполагаемое расстояние до соседа
 
                     if tentative_g_score < g_score.get(neighbor, float('inf')):
@@ -144,13 +148,18 @@ class Lidar:
 
         return None
 
+    @staticmethod
+    def _astar_heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
     def create_path(self, start: tuple, end: tuple) -> None:
         lines = []
-        path = self._astar(self.map_bytes, start, end)
+        path = self._astar(self.map_bytes, (start[0] / 35000 * self.size, start[1] / 35000 * self.size), end)
 
         if path is None:
             return None
 
+        current_line = []
         prev = path[0]
         p_dx, p_dy = None, None
         for x in path[1:]:
@@ -180,6 +189,7 @@ class Lidar:
 
         size = int(len(self.map_bytes) ** 0.5)
         im = Image.frombuffer('L', (size, size), self.map_bytes)
+        im = im.resize((int(im.size[0] / 4), int(im.size[1] / 4)))
         im.save(stream, format='PNG')
 
     def stop(self) -> None:

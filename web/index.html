@@ -93,8 +93,8 @@
 
             ws.send(JSON.stringify({
                 "type": "move",
-                "x": (- x + e.clientX) / 300 * 1000, // convert coordinates from image to map
-                "y": (- y + e.clientY) / 300 * 1000, // convert coordinates from image to map
+                "x": (- x + e.clientX) / canvas.height * 8196, // convert coordinates from image to map
+                "y": (- y + e.clientY) / canvas.height * 8196, // convert coordinates from image to map
             }))
 
         }

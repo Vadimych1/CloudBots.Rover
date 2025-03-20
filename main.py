@@ -19,7 +19,7 @@ from src.web.websocket import R_WebSocket
 
 
 dotenv.load_dotenv(".env")
-PROD = os.getenv('PROD') == "1"
+PROD = True
 DEBUG = False
 print(f"Running with:\nPROD:{PROD}\nDEBUG:{DEBUG}\n")
 
@@ -73,8 +73,7 @@ class Robot:
             
             self.motor_driver = BaseMultiMotorDriver([0x0a, 0x0c, 0x0b, 0x0d]) # motor driver
         
-        self.lidar = Lidar(lidar_port) # lidar driver
-        self.map = Map() # map
+        self.lidar = Lidar(port=lidar_port) # lidar driver
         
 
         self.httpd = R_HTTPServer() # HTTP server on port 1025
@@ -127,7 +126,7 @@ class Robot:
     :return: (v1, v2, v3, v4)
     :rtype: tuple[float, float, float, float]
     """
-    def _calculate_wheels_speed_by_movement(self, vx: float, vy: float, w: float) -> tuple[float, float, float, float]:
+    def _calculate_wheels_speed_by_movement(self, vx: float, vy: float, w: float) -> tuple[tuple[float, float, float, float], int]:
         vx *= 2
         vy *= 2
         
@@ -141,7 +140,7 @@ class Robot:
         # if wheel rotates with speed > 400 then
         # increase movement time and recalc
         n = 0
-        while max(d) > 400:
+        while max(map(abs, d)) > 400:
             vx /= 2
             vy /= 2
             w /= 2
@@ -154,7 +153,7 @@ class Robot:
             n += 1
     
         # return wheels speeds and how much time was decreased 
-        return d, 1 / (2 ** n)
+        return d, 2 ** n
 
 
     """
@@ -248,23 +247,19 @@ class Robot:
     def _path_update_thread(self):
         c = 0
         while self._running:
-            if self.start and self.target and c % 3 == 0:
+            if self.start and self.target and c % 10 == 0 and self.path != None:
                 self.logger.info("Updating path")
-                self.path = self.map.create_path(self.rx, self.ry, *self.target)
+                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target)
                 time.sleep(1)
-                
-            elif c % 3 == 0:
-                time.sleep(1)
-            
+
             else:
                 for i in range(10):
                     if self.moving: break
                     time.sleep(0.07)
             
-            if c % 5 == 0:
-                self.map.haf_update_chunks()
-            
-            c += 1     
+            time.sleep(1)
+
+            c += 1
                     
     """
     Thread for checking error level on motor drivers
@@ -311,7 +306,7 @@ class Robot:
             case "move":
                 self.start = (self.rx, self.ry)
                 self.target = (json_data["x"], json_data["y"])
-                self.path = self.map.create_path(*self.start, *self.target)
+                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target)
                 
             case "run":
                 if self.start and self.end and self.path:
@@ -420,25 +415,25 @@ def main():
     r.main()
 
 
-if __name__ == "__main__":
-    main()
-    exit(0)
+# if __name__ == "__main__":
+#     main()
+#     exit(0)
 
 
 # TODO: FOR TEST
-# init_motors(1, 50)
-# r = Robot(wheel_radius=50, d=150, l=200)
+init_motors(1, 50)
+r = Robot(wheel_radius=50, d=150, l=200)
 
-# ang = np.pi / 6
-# phi = np.pi / 4
-# t = 4
+ang = 0
+phi = np.pi / 4
+t = 4
 
-# q, n = r._calculate_wheels_speed_by_movement(100 * math.cos(ang), 100 * math.sin(ang), phi) * np.array([-1, 1, -1, 1])
+q, n = r._calculate_wheels_speed_by_movement(50 * np.cos(ang), 50 * np.sin(ang), phi)
+q *= np.array([-1, 1, -1, 1])
 # q = r._calculate_wheels_speed_by_movement(100, 0, 0) * np.array([-1, 1, -1, 1]) * 60
 # q = r._calculate_wheels_speed_by_movement(0, 100, 0) * np.array([-1, 1, -1, 1]) * 60
-# q = r._calculate_wheels_speed_by_movement(25*math.sqrt(2), 25*math.sqrt(2), 0) * np.array([-1, 1, -1, 1]) * 60
+# q = r._calculate_wheels_speed_by_movement(25*np.sqrt(2), 25*np.sqrt(2), 0) * np.array([-1, 1, -1, 1]) * 60
 
-# print(q, sum(q), n)
-# r.motor_driver.move(q, t)
-# r.motor_driver.only(70, 1, 0x0c)
-# time.sleep(t)
+print(q, sum(q), n)
+r.motor_driver.move(q, t * n)
+time.sleep(t * n)

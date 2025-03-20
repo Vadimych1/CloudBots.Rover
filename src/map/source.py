@@ -201,10 +201,6 @@ class Map:
         self.logger.info(f"Finding path done in {i} iterations.")
 
         return None  # Return None if no path is found
-
-    @staticmethod
-    def _astar_heuristic(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
         
     def _load_path_chunks(self, start_chunk, end_chunk):
         """
