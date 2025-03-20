@@ -2,3 +2,5 @@ count.py
 .git-credentials
 venv
 **/__pycache__
+BreezySLAM
+PyRoboViz
