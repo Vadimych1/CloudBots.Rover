@@ -1,4 +1,4 @@
-# from rplidar import RPLidar, RPLidarException
+from rplidar import RPLidar, RPLidarException
 import numpy as np
 from cv2.typing import MatLike
 import logging
@@ -7,6 +7,7 @@ import cv2 as cv
 import sys
 from sklearn.neighbors import NearestNeighbors
 from scipy.optimize import minimize
+import time
 
 
 class SLAM:
@@ -16,12 +17,37 @@ class SLAM:
     :param initial_state: the first data frame from LiDAR
     :type initial_state: MatLike
     """
-    def __init__(self, initial_state: MatLike = None) -> None:
-        self.pos = np.array([0.0, 0.0, 0.0])
-        self.prevstate = initial_state
+    def __init__(self, initial_state: MatLike = None, search_radius: int = 2000) -> None:
+        self.pos = np.array([0.0, 0.0, 0.0])            
 
         self.result = None
         self.error = None
+
+        self.map = np.zeros((20000, 20000), dtype=np.uint16)
+        self.search_radius = search_radius
+
+        d = np.array([self.map.shape[0] / 2, self.map.shape[1] / 2])
+        for p in initial_state.T:
+            ind = (p + d).astype(np.uint16)
+            self.map[ind[0], ind[1]] = 255
+
+
+    def _grid2dots(self, x1, y1, x2, y2):
+        x1 += int(self.map.shape[0]/2)
+        x2 += int(self.map.shape[0]/2)
+        y1 += int(self.map.shape[1]/2)
+        y2 += int(self.map.shape[1]/2)
+        
+        g = self.map[x1:x2, y1:y2]
+        points = []
+
+        for y in range(g.shape[0]):
+            for x in range(g.shape[1]):
+                if g[y, x] == 255:
+                    points.append((x, y))
+
+        return np.array(points).T
+
 
     def update(self, newstate: MatLike) -> None:
         """
@@ -31,30 +57,32 @@ class SLAM:
         :type newstate: MatLike
         """
 
-        if self.prevstate is None:
-            self.prevstate = newstate
-            return
-
-        aligned_points = self.prevstate
+        dx, dy, _ = self.pos
+        aligned_points = self._grid2dots(int(dx - self.search_radius), int(dy - self.search_radius), 
+                                         int(dx + self.search_radius), int(dy + self.search_radius),
+        )
         newstate_points = newstate
 
-        transform, error = self.icp(aligned_points, newstate_points, 5000)
+        print(aligned_points.shape, newstate_points.shape)
+        transform, error = self.icp(aligned_points, newstate_points)
 
-        dx, dy = transform[0, 2], transform[1, 2]
+        ndx, ndy = transform[0, 2], transform[1, 2]
         phi = np.arcsin(transform[0, 1])
 
-        self.pos[0] += dx
-        self.pos[1] += dy
+        self.pos[0] += ndx
+        self.pos[1] += ndy
         self.pos[2] += phi
-
         self.pos[2] = self.pos[2] % (2 * np.pi)
 
-        # Store results
-        self.prevstate = newstate
+        delta = np.array([ndx - dx, ndy - dy])
+        for p in newstate_points.T:
+            ind = p - delta
+            self.map[int(ind[0]), int(ind[1])] = 255
+
         self.result = transform
         self.error = error
 
-    def icp(self, a, b, n_iters: int = 60) -> np.ndarray[np.float64]:
+    def icp(self, a, b, n_iters: int = 500) -> np.ndarray[np.float64]:
         """
         Implementation of Iterative Closest Point algorithm
 
@@ -194,6 +222,7 @@ class SLAM:
         init_pose = (0, 0, 0)
         src = np.array([a.T], copy=True).astype(np.float32)
         dst = np.array([b.T], copy=True).astype(np.float32)
+
         Tr = np.array(
             [
                 [np.cos(init_pose[2]), -np.sin(init_pose[2]), init_pose[0]],
@@ -207,7 +236,10 @@ class SLAM:
         T_opt = np.array([])
         error_max = sys.maxsize
 
-        for _ in range(n_iters):
+        # for _ in range(n_iters):
+        starttime = time.time()
+
+        while time.time() - starttime < 2:
             _, indices = (
                 NearestNeighbors(n_neighbors=1, algorithm="auto", p=3)
                 .fit(dst[0])
@@ -246,150 +278,104 @@ class SLAM:
         p_opt[2] = p_opt[2] % (2 * np.pi) # 0 <= p_opt[2] <= 2pi
 
         return T_opt, error_max
-
+    
     # not working
-    def csm(self, a, b, search_radius=10, angle_range=np.pi/6, angle_step=np.pi/90, resolution=1.0) -> np.ndarray[np.float64]:
-        """
-        Implementation of Correlative Scan Matching algorithm
+    def csm(self, a, b, search_radius=300, angle_range=np.pi/6, angle_step=np.pi/90, resolution=1.0) -> np.ndarray[np.float64]:
+        def evaluate_correlation(transformed_a, b):
+            # Ensure transformed_a and b are 2D arrays with the same number of columns
+            if transformed_a.shape[1] != b.shape[1]:
+                raise ValueError("transformed_a and b must have the same number of columns")
 
-        :param a: previous scan
-        :type a: MatLike
-
-        :param b: current scan
-        :type b: MatLike
-
-        :param search_radius: maximum search radius in pixels
-        :type search_radius: float
-
-        :param angle_range: maximum rotation angle to search (in radians)
-        :type angle_range: float
-
-        :param angle_step: step size for rotation search (in radians)
-        :type angle_step: float
-
-        :param resolution: grid resolution for matching
-        :type resolution: float
-
-        :return: transformation matrix and error
-        :rtype: tuple[ndarray[float64], float]
-        """
-        # convert point clouds to grid representation
-        def points_to_grid(points, resolution, padding):
-            min_x, min_y = np.min(points[:, 0]) - padding, np.min(points[:, 1]) - padding
-            max_x, max_y = np.max(points[:, 0]) + padding, np.max(points[:, 1]) + padding
-            width = int((max_x - min_x) / resolution) + 1
-            height = int((max_y - min_y) / resolution) + 1
-            grid = np.zeros((height, width), dtype=np.uint8)
-            for point in points:
-                x, y = point
-                grid_x = int((x - min_x) / resolution)
-                grid_y = int((y - min_y) / resolution)
-                if 0 <= grid_x < width and 0 <= grid_y < height:
-                    grid[grid_y, grid_x] = 1
-
-            return grid, (min_x, min_y, resolution)
-
-        # create distance transform from grid
-        def create_distance_transform(grid):
-            dist_transform = cv.distanceTransform(1 - grid, cv.DIST_L2, 3)
-            return dist_transform
-        
-        # score a transformation
-        def score_transform(src_points, dst_dist_transform, transform_params, grid_info):
-            min_x, min_y, res = grid_info
-            
-            # create transformation matrix
-            dx, dy, theta = transform_params
-            T = np.array([
-                [np.cos(theta), -np.sin(theta), dx],
-                [np.sin(theta), np.cos(theta), dy],
-                [0, 0, 1]
-            ])
-            
-            # apply transformation
-            n = src_points.shape[0]
-            homogeneous_points = np.ones((n, 3))
-            homogeneous_points[:, :2] = src_points
-            transformed_points = (homogeneous_points @ T.T)[:, :2]
-            
-            grid_points = np.zeros_like(transformed_points)
-            grid_points[:, 0] = (transformed_points[:, 0] - min_x) / res
-            grid_points[:, 1] = (transformed_points[:, 1] - min_y) / res
-            
-            # apply to nearest grid cell
-            grid_points = np.round(grid_points).astype(np.int32)
-            
-            # filter invalid
-            valid_indices = (
-                (grid_points[:, 0] >= 0) & 
-                (grid_points[:, 0] < dst_dist_transform.shape[1]) & 
-                (grid_points[:, 1] >= 0) & 
-                (grid_points[:, 1] < dst_dist_transform.shape[0])
-            )
-            
-            valid_points = grid_points[valid_indices]
-            
-            if len(valid_points) == 0:
-                return float('inf')
-            
-            # calc distances
-            distances = dst_dist_transform[valid_points[:, 1], valid_points[:, 0]]
-            
-            # calc score
-            score = np.mean(distances)
+            # Example correlation evaluation using nearest neighbors
+            nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto').fit(b)
+            distances, _ = nbrs.kneighbors(transformed_a)
+            score = -np.sum(distances)  # Negative sum of distances as a simple score
             return score
-        
-        src_points = a.copy().T
-        dst_points = b.copy().T
-        
-        # grid & dist transforms
-        padding = search_radius * resolution
-        dst_grid, grid_info = points_to_grid(dst_points, resolution, padding)
-        dst_dist_transform = create_distance_transform(dst_grid)
-        
-        best_score = float('inf')
-        best_transform = np.eye(3)
-        
-        x_range = np.arange(-search_radius, search_radius + 1, resolution)
-        y_range = np.arange(-search_radius, search_radius + 1, resolution)
-        theta_range = np.arange(-angle_range, angle_range + angle_step, angle_step)
-        
-        # search for the best transformation
-        for theta in theta_range:
-            for dx in x_range[::2]:
-                for dy in y_range[::2]:
-                    score = score_transform(src_points, dst_dist_transform, (dx, dy, theta), grid_info)
-                    if score < best_score:
-                        best_score = score
-                        best_transform = np.array([
-                            [np.cos(theta), -np.sin(theta), dx],
-                            [np.sin(theta), np.cos(theta), dy],
-                            [0, 0, 1]
-                        ])
-        
-        # calc best transform
-        dx_best, dy_best = best_transform[0, 2], best_transform[1, 2]
-        theta_best = np.arctan2(best_transform[1, 0], best_transform[0, 0])
-        
-        refined_x_range = np.arange(dx_best - resolution, dx_best + resolution + 0.1, resolution/2)
-        refined_y_range = np.arange(dy_best - resolution, dy_best + resolution + 0.1, resolution/2)
-        refined_theta_range = np.arange(theta_best - angle_step, theta_best + angle_step + 0.01, angle_step/2)
-        
-        # full search for the best transformation
-        for theta in refined_theta_range:
-            for dx in refined_x_range:
-                for dy in refined_y_range:
-                    score = score_transform(src_points, dst_dist_transform, (dx, dy, theta), grid_info)
-                    if score < best_score:
-                        best_score = score
-                        best_transform = np.array([
-                            [np.cos(theta), -np.sin(theta), dx],
-                            [np.sin(theta), np.cos(theta), dy],
-                            [0, 0, 1]
-                        ])
-        
-        return best_transform, best_score
 
+        best_score = -np.inf
+        best_transform = None
+
+        # Define the search space
+        for dx in np.arange(-search_radius, search_radius, resolution):
+            for dy in np.arange(-search_radius, search_radius, resolution):
+                for dtheta in np.arange(-angle_range, angle_range, angle_step):
+                    # Create transformation matrix
+                    T = np.array([
+                        [np.cos(dtheta), -np.sin(dtheta), dx],
+                        [np.sin(dtheta), np.cos(dtheta), dy],
+                        [0, 0, 1]
+                    ])
+
+                    # Apply transformation
+                    transformed_a = cv.transform(np.array([a.T]), T[:2])[0]
+
+                    # Ensure transformed_a is a 2D array with two columns
+                    transformed_a = transformed_a.reshape(-1, 2)
+
+                    # Evaluate correlation (e.g., using a simple distance metric)
+                    score = evaluate_correlation(transformed_a, b)
+
+                    # Update best score and transformation
+                    if score > best_score:
+                        best_score = score
+                        best_transform = T
+
+        return best_transform
+
+
+    def fsm(self, a, b, feature_threshold=0.1, search_radius=300, angle_range=np.pi/6, angle_step=np.pi/90, resolution=1.0) -> np.ndarray[np.float64]:
+        def extract_features(points):
+            # Example feature extraction using corner detection
+            # Convert points to an image-like format for feature detection
+            img = np.zeros((1000, 1000), dtype=np.uint8)
+            for x, y in points[0]:
+                img[int(y) % 1000, int(x) % 1000] = 255
+
+            # Detect corners using Harris Corner Detection
+            corners = cv.cornerHarris(img, 2, 3, 0.04)
+            features = np.argwhere(corners > feature_threshold * corners.max())
+            return features
+
+        def evaluate_feature_correlation(features_a, features_b):
+            # Example correlation evaluation using nearest neighbors
+            nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto').fit(features_b)
+            distances, _ = nbrs.kneighbors(features_a)
+            score = -np.sum(distances)  # Negative sum of distances as a simple score
+            return score
+
+        a = np.array([a.T], copy=True)
+        b = np.array([b.T], copy=True)
+
+        best_score = -np.inf
+        best_transform = None
+
+        # Extract features from both scans
+        features_a = extract_features(a)
+        features_b = extract_features(b)
+
+        # Define the search space
+        for dx in np.arange(-search_radius, search_radius, resolution):
+            for dy in np.arange(-search_radius, search_radius, resolution):
+                for dtheta in np.arange(-angle_range, angle_range, angle_step):
+                    # Create transformation matrix
+                    T = np.array([
+                        [np.cos(dtheta), -np.sin(dtheta), dx],
+                        [np.sin(dtheta), np.cos(dtheta), dy],
+                        [0, 0, 1]
+                    ])
+
+                    # Apply transformation to features
+                    transformed_features_a = cv.transform(np.array([features_a]), T[:2])[0]
+
+                    # Evaluate feature correlation
+                    score = evaluate_feature_correlation(transformed_features_a, features_b)
+
+                    # Update best score and transformation
+                    if score > best_score:
+                        best_score = score
+                        best_transform = T
+
+        return best_transform
 
 class Lidar:
     """
@@ -411,10 +397,23 @@ class Lidar:
                     if i == len(fallback_ports) - 1:
                         self.logger.error("Cannot connect to lidar, all fallbacks failed. Check if lidar connected or correct address.")
                         quit(1)
-        
-        self.slam = SLAM(np.array([]))
-        self.running = False
 
+        self.running = False
+        self.initializing = True
+
+        self.logger.info("Initializing SLAM")
+
+        init_vals = []
+        iter = self.scan()
+        for i in range(200):
+            init_vals.append(next(iter))
+
+        self.slam = SLAM(np.array(init_vals).T)
+        self.initializing = False
+
+        self.logger.info("Initialized")
+
+        self.stop()
 
     def health(self):
         """
@@ -465,25 +464,24 @@ class Lidar:
                     _, _, angle, distance = data
                     if distance <= 0:
                         continue
-
-                    dx, dy, dr = self.slam.pos
+                    
+                    dx, dy, dr = (0.0, 0.0, 0.0) if self.initializing else self.slam.pos
                     x, y = dx + distance * np.cos(np.deg2rad(angle + dr)), dy + distance * np.sin(np.deg2rad(angle + dr))
                     c += 1
 
-                    if c % 100 == 0:
-                        if self.slam.prevstate == None:
-                            self.slam.prevstate = np.array(scans)
-                        else:
-                            self.slam.update(np.array(scans))
-                        
-                        scans = []
+                    if not self.initializing:
+                        if (c + 1) % 600 == 0:
+                            self.slam.update(np.array(scans).T)
+                            print(self.slam.pos)
+                            scans = []
 
-                    if c % 301 == 0:   
-                        self.lidar.clean_input()
-                    elif c % 60001 == 0:
-                        raise RPLidarException()
-                    
-                    scans.append([x, y])
+                        if c % 301 == 0:   
+                            self.lidar.clean_input()
+                        elif c % 60001 == 0:
+                            raise RPLidarException()
+                        
+                        scans.append([x, y])
+
                     yield x, y
                     
             except RPLidarException as e:
@@ -493,7 +491,6 @@ class Lidar:
             
             except Exception as e:
                 self.logger.exception(e)
-
        
     def stop(self) -> None:
         """
@@ -505,18 +502,47 @@ class Lidar:
         self.lidar.stop()
 
 
+
+
+
+# if __name__ == "__main__":
+#     x1 = np.array([[x for x in range(0, 100)], [4 for x in range(0, 100)]])
+#     y1 = np.array([[x for x in range(0, 100)], [99 - x for x in range(0, 100)]])
+#     y2 = np.array([[x for x in range(0, 100)], [4 for x in range(0, 100)]])
+#     # y2 = np.array([[4 for x in range(0, 100)], [x for x in range(0, 100)]])
+
+#     s = SLAM(x1)
+
+#     # s.update(y1)
+#     # print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
+
+#     s.update(y1)
+#     print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
+#     s.update(y2)
+#     print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
+
 if __name__ == "__main__":
-    x1 = np.array([[x for x in range(0, 100)], [4 for x in range(0, 100)]])
-    y1 = np.array([[x for x in range(0, 100)], [99 - x for x in range(0, 100)]])
-    y2 = np.array([[x for x in range(0, 100)], [4 for x in range(0, 100)]])
-    # y2 = np.array([[4 for x in range(0, 100)], [x for x in range(0, 100)]])
+    l = Lidar()
+    
+    print("Running")
 
-    s = SLAM(x1)
+    i = 0 
+    p = []
+    q = []
+    for x in l.scan():
+        q.append(x)
 
-    # s.update(y1)
-    # print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
+        if i % 600 == 0:
+            p.append(q)
+            q = []
 
-    s.update(y1)
-    print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
-    s.update(y2)
-    print(s.error, s.pos[:2], np.rad2deg(s.pos[2]))
+        if i == 600 * 2:
+            break
+
+        i += 1
+
+    l.stop()
+
+    import json
+    json.dump(p, open("./data.json", "w"))
+    json.dump(l.slam._grid2dots(-20000, -20000, 20000, 20000).tolist(), open("./map.json", "w"))
