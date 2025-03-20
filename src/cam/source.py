@@ -145,8 +145,8 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
 
 
     MIN_LENGTH = 40
-    MAX_X_DELTA = 40
-    MAX_BOTTOM_PADDING = 70
+    MAX_X_DELTA = 60
+    MAX_BOTTOM_PADDING = 50
 
 
     def __init__(self):
@@ -182,9 +182,12 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
 
             if type(frame) != type(None):
                 self.results.append(self.process(frame))
-                if len(self.results) > 7:
+                if len(self.results) > 10:
                     self.results = self.results[1:]
-                self.result = Counter(self.results).most_common(1)[0][0]
+
+                q = [r for r in self.results if r is not None]
+                self.result = (sum(q)) / len(q) if len(q) > 0 else None
+
             else:
                 time.sleep(0.02)
 
@@ -206,7 +209,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         return dominant
 
 
-    def process(self, f: MatLike, threshold: int = 25, alpha: int = 7, canny_A: int = 200, canny_B: int = 250, percent_height: float = 2/3) -> ObstacleSide | None:
+    def process(self, f: MatLike, max_line_size_diff: int = 50, threshold: int = 25, alpha: int = 7, canny_A: int = 200, canny_B: int = 250, percent_height: float = 2/3) -> ObstacleSide | None:
         """
         Processes input image to detect obstacles
 
@@ -237,24 +240,28 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
 
         # get only vertical lines that start above `percent_height`
         result = []
-        if type(lines) != type(None):
+        if lines is not None:
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 if max(y1, y2) > f.shape[0] - self.MAX_BOTTOM_PADDING and abs(y1 - y2) > self.MIN_LENGTH and abs(x1 - x2) < self.MAX_X_DELTA:
-                    result.append((x1 + x2) / 2)
+                    result.append(((x1 + x2) / 2, abs(y1 - y2)))
         else:
             return None
 
         # select obstacle side
         if len(result) > 0:
-            mid = sum(result) / len(result)
+            maxlen = max(result, key=lambda x: x[1])
+            result = [(item[0], item[1] / maxlen) for item in result if maxlen[1] - item[1] <= max_line_size_diff]
 
-            if mid < f.shape[1] / 3:
-                return ObstacleSide.LEFT
-            elif mid < f.shape[1] / 3 * 2:
-                return ObstacleSide.CENTER
-            else:
-                return ObstacleSide.RIGHT
+            s = 0
+            n = 0
+            for x, y in result:
+                y = y[0]
+                s += x * y
+                n += y
+
+            return s / n if n > 0 else 0
+
         else:
             return None
 
@@ -262,8 +269,11 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
 if __name__ == "__main__":
     d = R_ObstacleDetectorHandler()
 
+    prev_result = None
     cap = cv.VideoCapture(0)
-    try:
+    # try:
+    if True:
+        prev_frame = None
         while True:
             ret, frame = cap.read()
 
@@ -271,22 +281,30 @@ if __name__ == "__main__":
 
             frame = cv.putText(frame, f"{result}", (40, 40), cv.FONT_HERSHEY_PLAIN, 1, (255, 0, 255), 1)
 
-            match result:
-                case ObstacleSide.LEFT:
-                    frame = cv.putText(frame, "|>", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
-
-                case ObstacleSide.RIGHT:
-                    frame = cv.putText(frame, "<|", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
-
-                case ObstacleSide.CENTER:
-                    frame = cv.putText(frame, "|<|", (80, 100), cv.FONT_HERSHEY_PLAIN, 3, (255, 0, 255), 1)
+            image_center = (frame.shape[1] // 2, frame.shape[0] // 2)
+            if result is not None:
+                box_center = (int(result), image_center[1])
+                box_size = 100
+                top_left = (box_center[0] - box_size, box_center[1] - box_size)
+                bottom_right = (box_center[0] + box_size, box_center[1] + box_size)
+                frame = cv.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)
             
+            if prev_result is not None and result is not None and abs(result - prev_result) > 20:
+                box_center = (int(result), image_center[1])
+                box_size = 100
+                top_left = (box_center[0] - box_size, box_center[1] - box_size)
+                bottom_right = (box_center[0] + box_size, box_center[1] + box_size)
+                frame = cv.rectangle(frame, top_left, bottom_right, (255, 0, 0), 2)
+
+            prev_result = result
+            prev_frame = frame.copy()
+
             cv.imshow("fr", frame)
 
             if cv.waitKey(1) == ord('q'):
                 break
 
-    except Exception as e:
-        print("E", e)
+    # except Exception as e:
+        # print("E", e)
 
     cap.release()

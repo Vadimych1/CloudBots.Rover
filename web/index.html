@@ -46,16 +46,6 @@
                     style="background-color: red; color: #fff; outline: none; border: none; padding: 6px; border-radius: 5px;">
             </div>
         </div>
-
-        <button onclick="(() => {
-            if (ws) {
-                ws.send(JSON.stringify({
-                    type: 'clearmap',
-                }));
-            }
-        })()"
-            style="background-color: blue; color: #fff; outline: none; border: none; padding: 6px; border-radius: 5px;">Clear
-            map</button>
     </div>
 
 </body>
@@ -96,12 +86,18 @@
 
 
     canvas.addEventListener("click", function (e) {
-        if (ws && ws.readyState == WebSocket.OPEN)
+        if (ws && ws.readyState == WebSocket.OPEN) {
+            if (!confirm("Are you sure?")) {
+                return;
+            }
+
             ws.send(JSON.stringify({
                 "type": "move",
-                "x": (- x + e.clientX + chunks_offsets.x) / 300 * 1000, // convert coordinates from image to map
-                "y": (- y + e.clientY + chunks_offsets.y) / 300 * 1000, // convert coordinates from image to map
+                "x": (- x + e.clientX) / 300 * 1000, // convert coordinates from image to map
+                "y": (- y + e.clientY) / 300 * 1000, // convert coordinates from image to map
             }))
+
+        }
     })
 
     let chunks_offsets = { "x": 0, "y": 0 };
@@ -159,10 +155,8 @@
                     let img = new Image();
                     img.src = j.data;
                     img.onload = () => {
-                        ctx.drawImage(img, x, y, img.width / zoom.value, img.height / zoom.value);
+                        ctx.drawImage(img, x, y, canvas.height, canvas.height);
                     }
-
-                    chunks_offsets = j.chunk_minus_offset
 
                     console.log("Got image!")
                 }
