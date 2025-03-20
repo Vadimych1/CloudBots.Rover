@@ -7,12 +7,13 @@ from collections import deque
 import logging
 import threading
 import json
+from io import BytesIO
+import base64
 
 
 from src.cam.source import R_Cam, R_ObstacleDetectorHandler
 from src.lidar_module.source import Lidar
 from src.i2c_data.source import BaseMultiMotorDriver, init_motors
-from src.map.source import Map
 from src.web.httpserver import R_HTTPServer
 from src.web.websocket import R_WebSocket
 
@@ -194,10 +195,7 @@ class Robot:
     Thread for lidar data calculation
     """
     def _lidar_thread(self):
-        for (x, y) in self.lidar.scan():            
-            self.map.add_point(x, y)
-            if not self._running:
-                break
+        self.lidar.scan()
 
 
     # deprecated
@@ -328,22 +326,22 @@ class Robot:
                 self.moving = False
 
             case "map":
-                render = self.map.render(self.rx, self.ry, self.path, *(self.target if self.target else (None, None)))
-                return f'{{"type": "map_render", "data": "{render}", "chunk_minus_offset": {{"x": {self.map.min_chunk_x * 300}, "y": {self.map.min_chunk_y * 300}}}}}'
+                s = BytesIO()
+                self.lidar.render(s)
+                image = base64.b64encode(s.getvalue()).decode()
+                image = f"data:image/png;base64,{image}"
+
+                return f'{{"type": "map_render", "data": "{image}"}}'
                 
             case "data":
                 return json.dumps({
                     "type": "data",
                     "data": {
-                        "x": self.rx,
-                        "y": self.ry,
-                        "phi": self.rphi,
+                        "x": self.lidar.pos[0],
+                        "y": self.lidar.pos[1],
+                        "phi": self.lidar.pos[2],
                     }
                 })
-                
-            case "clearmap":
-                self.logger.info("Incoming request to clear map")
-                self._clearmap()
             
             
     """
@@ -406,13 +404,6 @@ class Robot:
         
         quit(0)
         
-    """
-    Clears map
-    """
-    def _clearmap(self):
-        del self.map.chunks
-        self.map.chunks = self.map._reinit_chunks()
-
     """
     Get current CV Action
     """

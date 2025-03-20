@@ -202,66 +202,6 @@ class Map:
 
         return None  # Return None if no path is found
 
-    def _astar(self, data, start, end):
-        directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
-        
-        start = tuple(map(int, start))
-        end = tuple(map(int, end))
-        
-        self.logger.info(f"Running A*. Start/end: {start}/{end}")
-        
-        rows, cols = data.shape
-
-        open_set = []
-        heapq.heappush(open_set, (0, start))  # Сохраняем кортеж (приоритет, координаты)
-        
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: self._astar_heuristic(start, end)}
-
-        i = 0
-        while open_set:
-            if i % 10000 == 0:
-                self.logger.info(f"Finding path. Iter {i}")
-            
-            if i // 10000 >= 20:
-                break
-                
-            current = heapq.heappop(open_set)[1]
-
-            if current == end:
-                # Воссоздание пути
-                path = []
-                while current in came_from:
-                    path.append(current)
-                    current = came_from[current]
-                path.append(start)
-                
-                self.logger.info(f"Finding path done in {i} iterations.")
-                return path[::-1]  # Возвращаем путь в правильном порядке
-
-            for direction in directions:
-                neighbor = (current[0] + direction[0], current[1] + direction[1])
-
-                # Проверяем границы карты и проходимость
-                if (0 <= neighbor[0] < rows) and (0 <= neighbor[1] < cols) and (data[neighbor] == 0):
-                    tentative_g_score = g_score[current] + 1  # Предполагаемое расстояние до соседа
-
-                    if tentative_g_score < g_score.get(neighbor, float('inf')):
-                        # Этот путь лучше, чем любой, который мы рассматривали
-                        came_from[neighbor] = current
-                        g_score[neighbor] = tentative_g_score
-                        f_score[neighbor] = tentative_g_score + self._astar_heuristic(neighbor, end)
-
-                        if neighbor not in [i[1] for i in open_set]:
-                            heapq.heappush(open_set, (f_score[neighbor], neighbor))
-                            
-            i += 1
-            
-        self.logger.info(f"Finding path done in {i} iterations.")
-
-        return None
-        
     @staticmethod
     def _astar_heuristic(a, b):
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
