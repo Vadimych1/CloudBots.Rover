@@ -260,6 +260,7 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
                 s += x * y
                 n += y
 
+            size = f.shape[0] / 2
             return s / n if n > 0 else 0
 
         else:

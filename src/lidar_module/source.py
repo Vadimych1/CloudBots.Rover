@@ -1,7 +1,9 @@
 import PIL.Image as Image
+import PIL.ImageDraw as ImageDraw
 import logging
 from io import IOBase
 import heapq
+import math
 
 from rplidar import RPLidar, RPLidarException
 from breezyslam.algorithms import RMHC_SLAM
@@ -187,9 +189,23 @@ class Lidar:
         Render map to stream
         """
 
-        size = int(len(self.map_bytes) ** 0.5)
+        size = self.size
         im = Image.frombuffer('L', (size, size), self.map_bytes)
-        im = im.resize((int(im.size[0] / 4), int(im.size[1] / 4)))
+
+        if self.pos is not None:
+            draw = ImageDraw.ImageDraw(im)
+            x, y, phi = self.pos
+            
+            x = int(x)
+            y = int(y)
+
+            draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=(255, 0, 0))
+            
+            radius = 30
+            rx, ry = radius * math.cos(phi), radius * math.sin(phi)
+            draw.line((x, y, x + rx, y + ry), (0, 255, 0), 3) 
+
+        im = im.resize((int(im.size[0] / 4 / 35000 * 8196), int(im.size[1] / 4 / 35000 * 8196)))
         im.save(stream, format='PNG')
 
     def stop(self) -> None:
