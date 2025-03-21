@@ -225,6 +225,8 @@ class MotorDriver:
     def getReducer(self):
         return _mot.getReducer(self.device_index)
 
+from pyiArduinoI2Cmotor import *
+
 class BaseMultiMotorDriver:
     """
     Class for controlling multiple motors at the same time on top-level.
@@ -238,6 +240,7 @@ class BaseMultiMotorDriver:
         
         self.motor_addrs = motor_addrs
         self.motors = [
+            # MotorDriver(addr) for addr in self.motor_addrs
             MotorDriver(addr) for addr in self.motor_addrs
         ]
         
@@ -246,10 +249,10 @@ class BaseMultiMotorDriver:
             mot.setInvGear(False, False)
             mot.setDirection(True)
             mot.setMagnet(2)
-            mot.setError(90)
-            mot.setStopNeutral(True)
-            mot.setPullI2C(True)
-            mot.setReducer(200.0)
+            mot.setError(99)
+            mot.setStopNeutral(False)
+            mot.setPullI2C(False)
+            mot.setReducer(500.0)
             time.sleep(0.06)
             
         self.logger.info("Motors initialized")
@@ -270,7 +273,7 @@ class BaseMultiMotorDriver:
             self.logger.debug(f"Moving {i}")
 
             # convert rad/s to rpm and run motor
-            motor.setSpeed(speeds[i]/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
+            motor.setSpeed(speeds[::self.prevstate][i]/(np.pi * 2)*60, MOT_RPM, m_time if m_time > 0 else 0, MOT_SEC if m_time > 0 else 0)
             time.sleep(0.01)
             
         self.prevstate *= -1

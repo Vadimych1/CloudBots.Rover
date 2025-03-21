@@ -345,7 +345,7 @@ class Robot:
     def run_threads(self):
         self.threads = {
             "lidar": threading.Thread(target=self._lidar_thread),
-            "mpu": threading.Thread(target=self._mpu_thread if PROD else lambda: ...),
+            # "mpu": threading.Thread(target=self._mpu_thread if PROD else lambda: ...), # deprecated
             "movement": threading.Thread(target=self._movement_thread if PROD else lambda: ...),
             "path_update": threading.Thread(target=self._path_update_thread),
             "error_check": threading.Thread(target=self._error_check_thread if PROD else lambda: ...),
@@ -372,12 +372,7 @@ class Robot:
                 case "printmap":
                     print("\n] Loaded chunks:", len(self.map.chunks))
                     print("] Chunks max values:\n|", "|".join([f"{x.d_x} {x.d_y} (max {np.max(x.data)}) (min {np.min(x.data)})\n" for x in self.map.chunks.values()]))
-                
-                case "clearmap":
-                    print("\n] Clearing map...")
-                    self._clearmap()
-                    print("] Map cleared\n")
-                    
+                                    
                 case "printchunksdata":
                     print("\n] Chunks data:")
                     for chunk in self.map.chunks.values():
@@ -391,7 +386,20 @@ class Robot:
 
                 case "cva":
                     self._cv_act_all()
+
+                case "movement":
+                    d = list(map(float, input("x y rot time > ").split()))
+                    while len(d) == 4:
+                        x, y, phi, t = d
+                        movement, q = self._calculate_wheels_speed_by_movement(x, y, phi)
+                        movement *= np.array([-1, 1, -1, 1])
                         
+                        t *= q
+                        self.motor_driver.move(movement, t)
+                        time.sleep(t)
+
+                        d = list(map(float, input("x y rot time > ").split()))
+
         self._running = False
         logging.shutdown()
         
@@ -415,25 +423,7 @@ def main():
     r.main()
 
 
-# if __name__ == "__main__":
-#     main()
-#     exit(0)
+if __name__ == "__main__":
+    main()
+    exit(0)
 
-
-# TODO: FOR TEST
-init_motors(1, 50)
-r = Robot(wheel_radius=50, d=150, l=200)
-
-ang = 0
-phi = np.pi / 4
-t = 4
-
-q, n = r._calculate_wheels_speed_by_movement(50 * np.cos(ang), 50 * np.sin(ang), phi)
-q *= np.array([-1, 1, -1, 1])
-# q = r._calculate_wheels_speed_by_movement(100, 0, 0) * np.array([-1, 1, -1, 1]) * 60
-# q = r._calculate_wheels_speed_by_movement(0, 100, 0) * np.array([-1, 1, -1, 1]) * 60
-# q = r._calculate_wheels_speed_by_movement(25*np.sqrt(2), 25*np.sqrt(2), 0) * np.array([-1, 1, -1, 1]) * 60
-
-print(q, sum(q), n)
-r.motor_driver.move(q, t * n)
-time.sleep(t * n)
