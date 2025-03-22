@@ -186,7 +186,7 @@ class Lidar:
         return lines
 
     
-    def render(self, stream: IOBase) -> None:
+    def render(self, stream: IOBase, detected_object: float | None = None) -> None:
         """
         Render map to stream
         """
@@ -198,6 +198,7 @@ class Lidar:
         if self.pos is not None:
             draw = ImageDraw.ImageDraw(im)
             x, y, phi = self.pos
+            phi += 180
             phi /= 180
             phi *= math.pi
 
@@ -216,7 +217,13 @@ class Lidar:
                     x1, y1 = start
                     x2, y2 = end
                     draw.line((x1, y1, x2, y2), (0, 0, 255), 30) 
-                    
+
+            if detected_object is not None:
+                print("Detected object at", detected_object)
+                x, y = 60, detected_object * 100
+                x = x * math.cos(phi) + y * math.sin(phi)
+                y = x * math.sin(phi) + y * math.cos(phi)
+                draw.ellipse((x - 30, y - 30, x + 30, y + 30), fill=(255, 0, 255))
 
         im = im.resize((int(im.size[0] / 4), int(im.size[1] / 4)))
         im.save(stream, format='PNG')

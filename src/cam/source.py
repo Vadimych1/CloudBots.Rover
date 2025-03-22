@@ -121,12 +121,15 @@ class R_Cam:
         """
         Mainloop function
         """
+        frame_rate = 20
+        prev = 0
         while self.cap.isOpened() and self.running:
+            time_elapsed = time.time() - prev
             ret, frame = self.cap.read()
             
-            if ret:
+            if time_elapsed > 1./frame_rate:
+                prev = time.time()
                 self._frame(frame)
-
 
 class ObstacleSide(Enum):
     """
@@ -155,13 +158,18 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         self.running = False
         self.results = []
         self.result = None
+        self.capsize = None
 
 
     def get_data(self):
         """
         Returns current state of detector
         """
-        return self.result
+
+        if self.result is not None:
+            return (self.result - self.capsize[0] / 2) / (self.capsize[0] / 2)
+        else:
+            return None
 
 
     def run(self):
@@ -179,10 +187,11 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         """
         while self.running:
             frame = self.cget()
+            self.capsize = frame.shape
 
-            if type(frame) != type(None):
+            if frame is None:
                 self.results.append(self.process(frame))
-                if len(self.results) > 10:
+                if len(self.results) > 15:
                     self.results = self.results[1:]
 
                 q = [r for r in self.results if r is not None]
@@ -227,18 +236,23 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         """
 
 
+        cv.imwrite("none.png", f)
         f = f[int(f.shape[0]*(1-percent_height)):f.shape[0]] # process only percent_height of image (from bottom)
+        # cv.imwrite("cropped.png", f)
         dominant = R_ObstacleDetectorHandler.get_dominant(f) # get the dominant color of image (the mostly seen)
+        # print(str(dominant))
         masked = cv.inRange(f, dominant - threshold, dominant + threshold) # apply mask by dominant color
+        # cv.imwrite("masked.png", masked)
         blur = cv.GaussianBlur(masked, (alpha, alpha), 10, borderType=cv.BORDER_DEFAULT) # blur image to destroy artifacts
+        # cv.imwrite("blurred.png", blur)
         canny = cv.Canny(blur, canny_A, canny_B) # get object borders by Canny
-
+        # cv.imwrite("canny.png", canny)
 
         # circles = cv.HoughCircles(canny, cv.HOUGH_GRADIENT, 1, f.shape[0] / 8, param1=100, param2=30, minRadius=30)
         lines = cv.HoughLinesP(canny, 1, np.pi/180, 80, None, 0, 10) # detect lines by Hough
 
 
-        # get only vertical lines that start above `percent_height`
+        # get only vertical lines that start above `MAX_BOTTOM_PADDING`
         result = []
         if lines is not None:
             for line in lines:
@@ -260,7 +274,6 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
                 s += x * y
                 n += y
 
-            size = f.shape[0] / 2
             return s / n if n > 0 else 0
 
         else:
@@ -301,6 +314,7 @@ if __name__ == "__main__":
             prev_frame = frame.copy()
 
             cv.imshow("fr", frame)
+            # cv.imwrite("result.png", frame)
 
             if cv.waitKey(1) == ord('q'):
                 break

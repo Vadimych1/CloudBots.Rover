@@ -322,7 +322,7 @@ class Robot:
 
             case "map":
                 s = BytesIO()
-                self.lidar.render(s)
+                self.lidar.render(s, self.obstacle_detetor.get_data())
                 image = base64.b64encode(s.getvalue()).decode()
                 image = f"data:image/png;base64,{image}"
 
@@ -351,8 +351,8 @@ class Robot:
             "error_check": threading.Thread(target=self._error_check_thread if PROD else lambda: ...),
             "websocket": self.ws.run(),
             "httpd": self.httpd.run(),
-            # "cam": self.cam.run(),
-            # "cam_obstacle": self.obstacle_detetor.run(),
+            "cam": self.cam.run(),
+            "cam_obstacle": self.obstacle_detetor.run(),
         }
         
         for t in self.threads.values():
