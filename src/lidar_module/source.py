@@ -37,6 +37,8 @@ class Lidar:
         self.map_bytes = bytearray(size * size)
         self.pos = None
 
+        self.path = None
+
         self.slam = RMHC_SLAM(LaserModel(), 8096, 35)
         self.running = False
 
@@ -90,8 +92,6 @@ class Lidar:
     def _astar(self, data, start, end):
         def get(x, y):
             return data[x * self.size + y]
-        
-        print(max(data), min(data))
         
         directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
         
@@ -181,6 +181,8 @@ class Lidar:
 
         lines.append((current_line[0], current_line[-1]))
         
+        self.path = lines
+
         return lines
 
     
@@ -191,21 +193,32 @@ class Lidar:
 
         size = self.size
         im = Image.frombuffer('L', (size, size), self.map_bytes)
+        im = im.convert("RGB")
 
         if self.pos is not None:
             draw = ImageDraw.ImageDraw(im)
             x, y, phi = self.pos
-            
-            x = int(x)
-            y = int(y)
+            phi /= 180
+            phi *= math.pi
 
-            draw.ellipse((x - 10, y - 10, x + 10, y + 10), fill=(255, 0, 0))
+            x = int(x / 35000 * self.size)
+            y = int(y / 35000 * self.size)
+
+            draw.ellipse((x - 40, y - 40, x + 40, y + 40), fill=(255, 0, 0))
             
-            radius = 30
+            radius = 80
             rx, ry = radius * math.cos(phi), radius * math.sin(phi)
-            draw.line((x, y, x + rx, y + ry), (0, 255, 0), 3) 
+            draw.line((x, y, x + rx, y + ry), (0, 255, 0), 30) 
 
-        im = im.resize((int(im.size[0] / 4 / 35000 * 8196), int(im.size[1] / 4 / 35000 * 8196)))
+            if self.path is not None:
+                for line in self.path:
+                    start, end = line
+                    x1, y1 = start
+                    x2, y2 = end
+                    draw.line((x1, y1, x2, y2), (0, 0, 255), 30) 
+                    
+
+        im = im.resize((int(im.size[0] / 4), int(im.size[1] / 4)))
         im.save(stream, format='PNG')
 
     def stop(self) -> None:
