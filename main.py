@@ -249,7 +249,19 @@ class Robot:
         while self._running:
             if self.start and self.target and c % 10 == 0 and self.path != None:
                 self.logger.info("Updating path")
-                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target)
+
+
+                obsts = []
+                obstpos = self.obstacle_detetor.get_data()
+                if obstpos is not None:
+                    r = self.lidar.pos[2] / 180 * np.pi
+                    x, y = 100 * obstpos, 80
+                    obsts.append((
+                        self.lidar.pos[0] + x * np.cos(r) + y * np.sin(r),
+                        self.lidar.pos[1] + x * np.sin(r) + y * np.cos(r),
+                    ))
+
+                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target, obsts)
                 time.sleep(1)
 
             else:
@@ -306,7 +318,18 @@ class Robot:
             case "move":
                 self.start = (self.rx, self.ry)
                 self.target = (json_data["x"], json_data["y"])
-                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target)
+
+                obsts = []
+                obstpos = self.obstacle_detetor.get_data()
+                if obstpos is not None:
+                    r = self.lidar.pos[2] / 180 * np.pi
+                    x, y = 100 * obstpos, 80
+                    obsts.append((
+                        self.lidar.pos[0] + x * np.cos(r) + y * np.sin(r),
+                        self.lidar.pos[1] + x * np.sin(r) + y * np.cos(r),
+                    ))
+
+                self.path = self.lidar.create_path((self.lidar.pos[0], self.lidar.pos[1]), self.target, obsts)
                 
             case "run":
                 if self.start and self.end and self.path:

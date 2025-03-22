@@ -89,9 +89,16 @@ class Lidar:
                 self.logger.exception(e)
 
 
-    def _astar(self, data, start, end):
+    def _astar(self, data, start, end, other_obstacles):
+        o_dots = []
+        for obst in other_obstacles:
+            x, y = obst
+            x = int(x)
+            y = int(y)
+            o_dots.extend([(x + i, y + j) for i in range(-50, 50) for j in range(-50, 50)])
+        
         def get(x, y):
-            return data[x * self.size + y]
+            return 0 if (x, y) in o_dots else data[x * self.size + y]
         
         directions = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
         
@@ -154,9 +161,10 @@ class Lidar:
     def _astar_heuristic(a, b):
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-    def create_path(self, start: tuple, end: tuple) -> None:
+    def create_path(self, start: tuple, end: tuple, other_obstacles: list[tuple[int, int]]) -> None:
         lines = []
-        path = self._astar(self.map_bytes, (start[0] / 35000 * self.size, start[1] / 35000 * self.size), end)
+
+        path = self._astar(self.map_bytes, (start[0] / 35000 * self.size, start[1] / 35000 * self.size), end, other_obstacles)
 
         if path is None:
             return None
@@ -220,10 +228,10 @@ class Lidar:
 
             if detected_object is not None:
                 print("Detected object at", detected_object)
-                x, y = 60, detected_object * 100
-                x = x * math.cos(phi) + y * math.sin(phi)
-                y = x * math.sin(phi) + y * math.cos(phi)
-                draw.ellipse((x - 30, y - 30, x + 30, y + 30), fill=(255, 0, 255))
+                r_x, r_y = 60, detected_object * 100
+                r_x = r_x * math.cos(phi) + r_y * math.sin(phi)
+                r_y = r_x * math.sin(phi) + r_y * math.cos(phi)
+                draw.ellipse((r_x + x - 40, r_y + y - 40, r_x + x + 40, r_y + y + 40), fill=(255, 0, 255))
 
         im = im.resize((int(im.size[0] / 4), int(im.size[1] / 4)))
         im.save(stream, format='PNG')

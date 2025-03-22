@@ -187,9 +187,9 @@ class R_ObstacleDetectorHandler(R_BaseCamHandler):
         """
         while self.running:
             frame = self.cget()
-            self.capsize = frame.shape
 
-            if frame is None:
+            if frame is not None:
+                self.capsize = frame.shape
                 self.results.append(self.process(frame))
                 if len(self.results) > 15:
                     self.results = self.results[1:]
